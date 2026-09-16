@@ -3,17 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>屍境重構：廢墟決戰 v7.2</title>
+    <title>屍境重構：廢墟決戰 v8.5</title>
     <style>
         * { box-sizing: border-box; }
         html, body { width: 100%; height: 100%; margin: 0; padding: 0; overflow: hidden; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; user-select: none; background: #000; }
         
-        /* 玩家資訊 UI - 調整內聚邊距 */
         #ui { position: absolute; top: 12px; left: 12px; color: #fff; text-shadow: 2px 2px 4px #000; font-size: 16px; pointer-events: none; z-index: 10; max-width: 80vw; }
         #crosshair { position: absolute; top: 50%; left: 50%; width: 14px; height: 14px; border: 2px solid rgba(255,255,255,0.8); border-radius: 50%; transform: translate(-50%, -50%); pointer-events: none; z-index: 10; }
         #crosshair::after { content: ''; position: absolute; top: 4px; left: 4px; width: 2px; height: 2px; background: red; }
         
-        /* 左下角矩形全地圖雷達 (強化彈性與響應式) */
         #minimap-container {
             position: absolute;
             bottom: 12px;
@@ -30,24 +28,26 @@
             z-index: 10;
             overflow: hidden;
         }
-        #minimap {
-            width: 100%;
-            height: 100%;
-            display: block;
-        }
+        #minimap { width: 100%; height: 100%; display: block; }
 
-        /* 商店樣式 */
         #shop { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(15, 15, 25, 0.95); color: white; padding: 20px; border-radius: 12px; display: none; text-align: center; border: 2px solid #ff4444; box-shadow: 0 0 20px rgba(255,68,68,0.4); z-index: 20; max-height: 85vh; width: 90%; max-width: 480px; overflow-y: auto; }
         
         /* 遊戲結束結算畫面 UI */
-        #game-over-screen { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(20, 0, 0, 0.95); color: white; padding: 25px; border-radius: 15px; display: none; text-align: center; border: 3px solid #ff0000; box-shadow: 0 0 30px rgba(255,0,0,0.8); z-index: 30; width: 85%; max-width: 360px; }
-        .stats-box { background: rgba(255,255,255,0.08); margin: 15px 0; padding: 12px; border-radius: 8px; text-align: left; line-height: 1.8; font-size: 15px; }
+        #game-over-screen { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(20, 0, 0, 0.95); color: white; padding: 20px; border-radius: 15px; display: none; text-align: center; border: 3px solid #ff0000; box-shadow: 0 0 30px rgba(255,0,0,0.8); z-index: 30; width: 90%; max-width: 420px; max-height: 90vh; overflow-y: auto; }
+        .stats-box { background: rgba(255,255,255,0.08); margin: 10px 0; padding: 10px; border-radius: 8px; text-align: left; line-height: 1.6; font-size: 14px; }
         
+        /* 排行榜表格樣式 */
+        .leaderboard-table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 13px; text-align: center; }
+        .leaderboard-table th { background: rgba(255,0,0,0.4); padding: 6px; border: 1px solid #555; }
+        .leaderboard-table td { padding: 5px; border: 1px solid #444; background: rgba(0,0,0,0.5); }
+        .leaderboard-table tr:nth-child(1) td { color: #ffd700; font-weight: bold; }
+        .leaderboard-table tr:nth-child(2) td { color: #c0c0c0; }
+        .leaderboard-table tr:nth-child(3) td { color: #cd7f32; }
+
         .btn { background: #222; color: white; border: 1px solid #ff4444; padding: 10px 16px; margin: 5px 0; cursor: pointer; font-size: 14px; border-radius: 6px; transition: 0.2s; width: 100%; }
         .btn:hover { background: #ff4444; color: black; font-weight: bold; }
         .btn:disabled { background: #444; border-color: #666; color: #aaa; cursor: not-allowed; }
         
-        /* 中央戰況提示文字 (大幅拉高防切除) */
         #msg { position: absolute; top: 15%; width: 100%; text-align: center; color: #ffeb3b; font-size: 26px; font-weight: bold; text-shadow: 3px 3px 6px #000; pointer-events: none; display: none; z-index: 10; padding: 0 10px; }
         #damage-flash { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(255,0,0,0.3); pointer-events: none; display: none; z-index: 5; }
     </style>
@@ -65,7 +65,6 @@
         <div style="font-size:12px; color:#aaa; margin-top:4px;">[WASD] 移動 | [左鍵] 連射 | [1-5] 切換武器 | [R] 換彈 | [E] 商店</div>
     </div>
     
-    <!-- 左下角矩形小地圖 -->
     <div id="minimap-container">
         <canvas id="minimap" width="160" height="160"></canvas>
     </div>
@@ -73,7 +72,6 @@
     <div id="crosshair"></div>
     <div id="msg">戰鬥準備開始！</div>
 
-    <!-- 商店 UI -->
     <div id="shop">
         <h2 style="font-size: 20px; margin-top:0;">🛒 軍火庫與技能升級 (按 E 關閉)</h2>
         <div id="weapon-shop" style="margin-bottom: 10px; border-bottom: 1px solid #555; padding-bottom: 10px;">
@@ -88,23 +86,36 @@
             <button class="btn" id="btn-up-hp" onclick="buyUpgrade('hp')">提升血量上限 (+25 HP) - 💰 <span id="cost-hp">50</span></button>
             <button class="btn" id="btn-up-dmg" onclick="buyUpgrade('dmg')">提升整體傷害 (+20%) - 💰 <span id="cost-dmg">75</span></button>
             <button class="btn" id="btn-up-speed" onclick="buyUpgrade('speed')">戰術機動加速 (+15%) - 💰 <span id="cost-speed">60</span></button>
+            <!-- 新增項目 -->
+            <button class="btn" id="btn-up-firerate" onclick="buyUpgrade('firerate')">⚡ 射速提升 (+15%) - 💰 <span id="cost-firerate">80</span></button>
+            <button class="btn" id="btn-up-ammo" onclick="buyUpgrade('ammo')">📦 彈藥上限擴充 (+25%) - 💰 <span id="cost-ammo">70</span></button>
         </div>
         <br>
         <button class="btn" onclick="toggleShop()" style="background: #444;">返回戰場</button>
     </div>
 
-    <!-- 遊戲結束結算畫面 UI -->
     <div id="game-over-screen">
-        <h1 style="color: #ff3333; margin: 0; font-size: 24px;">💀 陣亡通知</h1>
-        <p style="margin: 5px 0;">你已經被怪物大軍吞噬...</p>
+        <h1 style="color: #ff3333; margin: 0; font-size: 22px;">💀 陣亡通知</h1>
         <div class="stats-box">
-            📊 <b>本局最終數據統計：</b><br>
-            🌊 生存波次: <span id="stat-wave" style="color:#00ffff;">0</span><br>
-            👾 總擊殺數: <span id="stat-kills" style="color:#ff5555;">0</span><br>
-            💰 累計獲得金幣: <span id="stat-gold" style="color:#ffd700;">0</span><br>
-            🎯 總輸出傷害: <span id="stat-damage" style="color:#ff9900;">0</span>
+            📊 <b>本局數據：</b> 生存波次 <span id="stat-wave" style="color:#00ffff;">0</span> | 擊殺數 <span id="stat-kills" style="color:#ff5555;">0</span>
         </div>
-        <button class="btn" onclick="location.reload()" style="font-size: 16px; padding: 10px 20px; background: #ff4444; color: white;">🔄 重新開始遊戲</button>
+
+        <h3 style="margin: 10px 0 5px 0; color: #ffd700;">🏆 殿堂英雄排行榜 (前 5 名)</h3>
+        <table class="leaderboard-table">
+            <thead>
+                <tr>
+                    <th>名次</th>
+                    <th>玩家名稱</th>
+                    <th>最高波次</th>
+                    <th>總擊殺數</th>
+                </tr>
+            </thead>
+            <tbody id="leaderboard-body">
+                <tr><td colspan="4">載入排行榜中...</td></tr>
+            </tbody>
+        </table>
+        <br>
+        <button class="btn" onclick="location.reload()" style="font-size: 15px; padding: 8px 16px; background: #ff4444; color: white;">🔄 重新開始遊戲</button>
     </div>
 
 <script>
@@ -112,6 +123,9 @@ let scene, camera, renderer;
 let hp = 100, maxHp = 100, gold = 0, wave = 1;
 let totalZombiesInWave = 0, killedZombiesInWave = 0;
 let moveSpeed = 0.18, damageMult = 1.0;
+let fireRateMult = 1.0; // 射速加成倍率
+let ammoMult = 1.0;     // 彈藥加成倍率
+
 let zombies = [], bullets = [], particles = [], medkits = [];
 let keys = {};
 let isPaused = false, isGameOver = false;
@@ -122,16 +136,18 @@ const MAP_SIZE = 40;
 let minimapCanvas, minimapCtx;
 let totalKills = 0, totalGoldEarned = 0, totalDamageDealt = 0;
 
-const upgradeCosts = { hp: 50, dmg: 75, speed: 60 };
+const upgradeCosts = { hp: 50, dmg: 75, speed: 60, firerate: 80, ammo: 70 };
 
 const weapons = {
-    1: { name: "戰術手槍", maxAmmo: 12, ammo: 12, dmg: 35, fireRate: 250, auto: false, unlocked: true, price: 0, bulletColor: 0xffff00 },
-    2: { name: "戰術散彈槍", maxAmmo: 6, ammo: 6, dmg: 25, count: 6, fireRate: 750, auto: false, unlocked: false, price: 150, bulletColor: 0xffa500 },
-    3: { name: "突擊步槍", maxAmmo: 30, ammo: 30, dmg: 40, fireRate: 110, auto: true, unlocked: false, price: 300, bulletColor: 0xff4500 },
-    4: { name: "戰術衝鋒槍", maxAmmo: 45, ammo: 45, dmg: 22, fireRate: 60, auto: true, unlocked: false, price: 600, bulletColor: 0xffff00 },
-    5: { name: "離子電漿毀滅者", maxAmmo: 25, ammo: 25, dmg: 100, count: 2, fireRate: 140, auto: true, unlocked: false, price: 1200, bulletColor: 0x00ffff }
+    1: { name: "戰術手槍", baseMaxAmmo: 12, maxAmmo: 12, ammo: 12, dmg: 35, baseFireRate: 250, fireRate: 250, auto: false, unlocked: true, price: 0, bulletColor: 0xffff00 },
+    2: { name: "戰術散彈槍", baseMaxAmmo: 6, maxAmmo: 6, ammo: 6, dmg: 25, count: 6, baseFireRate: 750, fireRate: 750, auto: false, unlocked: false, price: 150, bulletColor: 0xffa500 },
+    3: { name: "突擊步槍", baseMaxAmmo: 30, maxAmmo: 30, ammo: 30, dmg: 40, baseFireRate: 110, fireRate: 110, auto: true, unlocked: false, price: 300, bulletColor: 0xff4500 },
+    4: { name: "戰術衝鋒槍", baseMaxAmmo: 45, maxAmmo: 45, ammo: 45, dmg: 22, baseFireRate: 60, fireRate: 60, auto: true, unlocked: false, price: 600, bulletColor: 0xffff00 },
+    5: { name: "離子電漿毀滅者", baseMaxAmmo: 25, maxAmmo: 25, ammo: 25, dmg: 100, count: 2, baseFireRate: 140, fireRate: 140, auto: true, unlocked: false, price: 1200, bulletColor: 0x00ffff }
 };
 let currentWeaponKey = 1;
+
+const DB_URL = "https://ruins-showdown-default-rtdb.firebaseio.com/leaderboard.json";
 
 function init() {
     scene = new THREE.Scene();
@@ -389,7 +405,7 @@ function shoot() {
     const w = weapons[currentWeaponKey];
     if (!w.unlocked) return;
     const now = Date.now();
-    if (now - w.lastShot < w.fireRate || w.ammo <= 0) return;
+    if (now - (w.lastShot || 0) < w.fireRate || w.ammo <= 0) return;
     
     w.lastShot = now;
     w.ammo--;
@@ -450,6 +466,11 @@ function buyWeapon(key) {
     if (!w.unlocked && gold >= w.price) {
         gold -= w.price;
         w.unlocked = true;
+        // 套用當前的屬性加成
+        w.maxAmmo = Math.floor(w.baseMaxAmmo * ammoMult);
+        w.ammo = w.maxAmmo;
+        w.fireRate = w.baseFireRate * fireRateMult;
+        
         currentWeaponKey = key;
         showMsg(`解鎖新武器: ${w.name}！`);
         updateUI();
@@ -469,6 +490,17 @@ function buyUpgrade(type) {
             damageMult += 0.20;
         } else if (type === 'speed') {
             moveSpeed += 0.03;
+        } else if (type === 'firerate') {
+            fireRateMult *= 0.85; // 間隔縮短 15%
+            for (let k in weapons) {
+                weapons[k].fireRate = weapons[k].baseFireRate * fireRateMult;
+            }
+        } else if (type === 'ammo') {
+            ammoMult += 0.25; // 容量擴充 25%
+            for (let k in weapons) {
+                weapons[k].maxAmmo = Math.floor(weapons[k].baseMaxAmmo * ammoMult);
+                weapons[k].ammo = weapons[k].maxAmmo; // 升級後直接補滿
+            }
         }
         upgradeCosts[type] = Math.floor(cost * 1.5);
         updateUI();
@@ -493,6 +525,8 @@ function updateShopUI() {
     document.getElementById('cost-hp').innerText = upgradeCosts.hp;
     document.getElementById('cost-dmg').innerText = upgradeCosts.dmg;
     document.getElementById('cost-speed').innerText = upgradeCosts.speed;
+    document.getElementById('cost-firerate').innerText = upgradeCosts.firerate;
+    document.getElementById('cost-ammo').innerText = upgradeCosts.ammo;
 }
 
 function updateUI() {
@@ -567,16 +601,74 @@ function showMsg(txt) {
     setTimeout(() => { if (!waveTransitioning) msg.style.display = 'none'; }, 2000);
 }
 
+async function processLeaderboard(currentWave, currentKills) {
+    let scores = [];
+    try {
+        const res = await fetch(DB_URL);
+        const data = await res.json();
+        if (data) {
+            scores = Object.values(data);
+        }
+    } catch (e) {
+        console.warn("無法取得線上排行榜:", e);
+    }
+
+    scores.sort((a, b) => (b.wave - a.wave) || (b.kills - a.kills));
+
+    const isTop5 = scores.length < 5 || 
+        currentWave > scores[scores.length - 1].wave || 
+        (currentWave === scores[scores.length - 1].wave && currentKills > scores[scores.length - 1].kills);
+
+    if (isTop5) {
+        let name = prompt("🎉 恭喜！你的戰績進入全球前 5 名！請輸入你的英雄暱稱：", "無名勇士");
+        if (!name || name.trim() === "") name = "無名勇士";
+        
+        const newRecord = { name: name.trim().substring(0, 10), wave: currentWave, kills: currentKills };
+        scores.push(newRecord);
+        scores.sort((a, b) => (b.wave - a.wave) || (b.kills - a.kills));
+        scores = scores.slice(0, 5);
+
+        try {
+            await fetch(DB_URL, {
+                method: 'PUT',
+                body: JSON.stringify(scores),
+                headers: { 'Content-Type': 'application/json' }
+            });
+        } catch (e) {
+            console.error("更新排行榜失敗:", e);
+        }
+    } else {
+        scores = scores.slice(0, 5);
+    }
+
+    const tbody = document.getElementById('leaderboard-body');
+    tbody.innerHTML = "";
+    
+    if (scores.length === 0) {
+        tbody.innerHTML = "<tr><td colspan='4'>暫無榜單紀錄</td></tr>";
+    } else {
+        scores.forEach((s, idx) => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>第 ${idx + 1} 名</td>
+                <td>${s.name}</td>
+                <td>第 ${s.wave} 波</td>
+                <td>${s.kills} 隻</td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+}
+
 function gameOver() {
     isGameOver = true;
     document.exitPointerLock();
     
     document.getElementById('stat-wave').innerText = wave;
     document.getElementById('stat-kills').innerText = totalKills;
-    document.getElementById('stat-gold').innerText = totalGoldEarned;
-    document.getElementById('stat-damage').innerText = Math.floor(totalDamageDealt);
-    
     document.getElementById('game-over-screen').style.display = 'block';
+
+    processLeaderboard(wave, totalKills);
 }
 
 function animate() {
