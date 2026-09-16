@@ -2,20 +2,26 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <title>屍境重構：廢墟決戰 v7.1</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>屍境重構：廢墟決戰 v7.2</title>
     <style>
-        body { margin: 0; overflow: hidden; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; user-select: none; background: #000; }
-        #ui { position: absolute; top: 15px; left: 15px; color: #fff; text-shadow: 2px 2px 4px #000; font-size: 18px; pointer-events: none; z-index: 10; }
+        * { box-sizing: border-box; }
+        html, body { width: 100%; height: 100%; margin: 0; padding: 0; overflow: hidden; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; user-select: none; background: #000; }
+        
+        /* 玩家資訊 UI - 調整內聚邊距 */
+        #ui { position: absolute; top: 12px; left: 12px; color: #fff; text-shadow: 2px 2px 4px #000; font-size: 16px; pointer-events: none; z-index: 10; max-width: 80vw; }
         #crosshair { position: absolute; top: 50%; left: 50%; width: 14px; height: 14px; border: 2px solid rgba(255,255,255,0.8); border-radius: 50%; transform: translate(-50%, -50%); pointer-events: none; z-index: 10; }
         #crosshair::after { content: ''; position: absolute; top: 4px; left: 4px; width: 2px; height: 2px; background: red; }
         
-        /* 左下角矩形全地圖雷達 */
+        /* 左下角矩形全地圖雷達 (強化彈性與響應式) */
         #minimap-container {
             position: absolute;
-            bottom: 20px;
-            left: 20px;
-            width: 180px;
-            height: 180px;
+            bottom: 12px;
+            left: 12px;
+            width: 160px;
+            height: 160px;
+            max-width: 28vw;
+            max-height: 28vw;
             background: rgba(10, 15, 25, 0.85);
             border: 2px solid #00ffff;
             border-radius: 8px;
@@ -27,19 +33,22 @@
         #minimap {
             width: 100%;
             height: 100%;
+            display: block;
         }
 
         /* 商店樣式 */
-        #shop { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(15, 15, 25, 0.95); color: white; padding: 25px; border-radius: 12px; display: none; text-align: center; border: 2px solid #ff4444; box-shadow: 0 0 20px rgba(255,68,68,0.4); z-index: 20; max-height: 80vh; overflow-y: auto; }
+        #shop { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(15, 15, 25, 0.95); color: white; padding: 20px; border-radius: 12px; display: none; text-align: center; border: 2px solid #ff4444; box-shadow: 0 0 20px rgba(255,68,68,0.4); z-index: 20; max-height: 85vh; width: 90%; max-width: 480px; overflow-y: auto; }
         
-        /* 遊戲結束結算畫面 */
-        #game-over-screen { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(20, 0, 0, 0.95); color: white; padding: 35px; border-radius: 15px; display: none; text-align: center; border: 3px solid #ff0000; box-shadow: 0 0 30px rgba(255,0,0,0.8); z-index: 30; min-width: 320px; }
-        .stats-box { background: rgba(255,255,255,0.08); margin: 15px 0; padding: 15px; border-radius: 8px; text-align: left; line-height: 1.8; }
+        /* 遊戲結束結算畫面 UI */
+        #game-over-screen { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(20, 0, 0, 0.95); color: white; padding: 25px; border-radius: 15px; display: none; text-align: center; border: 3px solid #ff0000; box-shadow: 0 0 30px rgba(255,0,0,0.8); z-index: 30; width: 85%; max-width: 360px; }
+        .stats-box { background: rgba(255,255,255,0.08); margin: 15px 0; padding: 12px; border-radius: 8px; text-align: left; line-height: 1.8; font-size: 15px; }
         
-        .btn { background: #222; color: white; border: 1px solid #ff4444; padding: 10px 20px; margin: 5px; cursor: pointer; font-size: 15px; border-radius: 6px; transition: 0.2s; }
+        .btn { background: #222; color: white; border: 1px solid #ff4444; padding: 10px 16px; margin: 5px 0; cursor: pointer; font-size: 14px; border-radius: 6px; transition: 0.2s; width: 100%; }
         .btn:hover { background: #ff4444; color: black; font-weight: bold; }
         .btn:disabled { background: #444; border-color: #666; color: #aaa; cursor: not-allowed; }
-        #msg { position: absolute; top: 25%; width: 100%; text-align: center; color: #ffeb3b; font-size: 32px; font-weight: bold; text-shadow: 3px 3px 6px #000; pointer-events: none; display: none; z-index: 10; }
+        
+        /* 中央戰況提示文字 (大幅拉高防切除) */
+        #msg { position: absolute; top: 15%; width: 100%; text-align: center; color: #ffeb3b; font-size: 26px; font-weight: bold; text-shadow: 3px 3px 6px #000; pointer-events: none; display: none; z-index: 10; padding: 0 10px; }
         #damage-flash { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(255,0,0,0.3); pointer-events: none; display: none; z-index: 5; }
     </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -53,12 +62,12 @@
         <div>🌊 當前波次: <span id="wave" style="color: #00ffff; font-weight: bold;">1</span></div>
         <div>👾 剩餘敵人: <span id="zombie-count" style="color: #ff4444; font-weight: bold;">0</span></div>
         <div>🔫 武器: <span id="weapon">戰術手槍</span> (<span id="ammo">12/12</span>)</div>
-        <div style="font-size:13px; color:#aaa; margin-top:8px;">[WASD] 移動 | [按住左鍵] 自動連射 | [1-5] 切換武器 | [R] 換彈 | [E] 商店</div>
+        <div style="font-size:12px; color:#aaa; margin-top:4px;">[WASD] 移動 | [左鍵] 連射 | [1-5] 切換武器 | [R] 換彈 | [E] 商店</div>
     </div>
     
     <!-- 左下角矩形小地圖 -->
     <div id="minimap-container">
-        <canvas id="minimap" width="180" height="180"></canvas>
+        <canvas id="minimap" width="160" height="160"></canvas>
     </div>
 
     <div id="crosshair"></div>
@@ -66,18 +75,18 @@
 
     <!-- 商店 UI -->
     <div id="shop">
-        <h2>🛒 軍火庫與技能升級 (按 E 關閉)</h2>
-        <div id="weapon-shop" style="margin-bottom: 15px; border-bottom: 1px solid #555; padding-bottom: 15px;">
+        <h2 style="font-size: 20px; margin-top:0;">🛒 軍火庫與技能升級 (按 E 關閉)</h2>
+        <div id="weapon-shop" style="margin-bottom: 10px; border-bottom: 1px solid #555; padding-bottom: 10px;">
             <h3>解鎖新武器</h3>
-            <button class="btn" id="buy-w2" onclick="buyWeapon(2)">購買 戰術散彈槍 - 💰 150</button><br>
-            <button class="btn" id="buy-w3" onclick="buyWeapon(3)">購買 突擊步槍 - 💰 300</button><br>
-            <button class="btn" id="buy-w4" onclick="buyWeapon(4)">購買 戰術衝鋒槍 (極高射速) - 💰 600</button><br>
+            <button class="btn" id="buy-w2" onclick="buyWeapon(2)">購買 戰術散彈槍 - 💰 150</button>
+            <button class="btn" id="buy-w3" onclick="buyWeapon(3)">購買 突擊步槍 - 💰 300</button>
+            <button class="btn" id="buy-w4" onclick="buyWeapon(4)">購買 戰術衝鋒槍 - 💰 600</button>
             <button class="btn" id="buy-w5" onclick="buyWeapon(5)">購買 離子電漿毀滅者 - 💰 1200</button>
         </div>
         <div>
-            <h3>能力強化 (每級費用增加 50%)</h3>
-            <button class="btn" id="btn-up-hp" onclick="buyUpgrade('hp')">提升血量上限 (+25 HP) - 💰 <span id="cost-hp">50</span></button><br>
-            <button class="btn" id="btn-up-dmg" onclick="buyUpgrade('dmg')">提升整體傷害 (+20%) - 💰 <span id="cost-dmg">75</span></button><br>
+            <h3>能力強化 (費用遞增 50%)</h3>
+            <button class="btn" id="btn-up-hp" onclick="buyUpgrade('hp')">提升血量上限 (+25 HP) - 💰 <span id="cost-hp">50</span></button>
+            <button class="btn" id="btn-up-dmg" onclick="buyUpgrade('dmg')">提升整體傷害 (+20%) - 💰 <span id="cost-dmg">75</span></button>
             <button class="btn" id="btn-up-speed" onclick="buyUpgrade('speed')">戰術機動加速 (+15%) - 💰 <span id="cost-speed">60</span></button>
         </div>
         <br>
@@ -86,8 +95,8 @@
 
     <!-- 遊戲結束結算畫面 UI -->
     <div id="game-over-screen">
-        <h1 style="color: #ff3333; margin: 0;">💀 陣亡通知</h1>
-        <p>你已經被怪物大軍吞噬...</p>
+        <h1 style="color: #ff3333; margin: 0; font-size: 24px;">💀 陣亡通知</h1>
+        <p style="margin: 5px 0;">你已經被怪物大軍吞噬...</p>
         <div class="stats-box">
             📊 <b>本局最終數據統計：</b><br>
             🌊 生存波次: <span id="stat-wave" style="color:#00ffff;">0</span><br>
@@ -95,7 +104,7 @@
             💰 累計獲得金幣: <span id="stat-gold" style="color:#ffd700;">0</span><br>
             🎯 總輸出傷害: <span id="stat-damage" style="color:#ff9900;">0</span>
         </div>
-        <button class="btn" onclick="location.reload()" style="font-size: 18px; padding: 12px 30px; background: #ff4444; color: white;">🔄 重新開始遊戲</button>
+        <button class="btn" onclick="location.reload()" style="font-size: 16px; padding: 10px 20px; background: #ff4444; color: white;">🔄 重新開始遊戲</button>
     </div>
 
 <script>
@@ -110,16 +119,11 @@ let waveTransitioning = false;
 let isMouseDown = false;
 const MAP_SIZE = 40;
 
-// 小地圖 Canvas
 let minimapCanvas, minimapCtx;
-
-// 統計數據
 let totalKills = 0, totalGoldEarned = 0, totalDamageDealt = 0;
 
-// 升級價格與遞增係數
 const upgradeCosts = { hp: 50, dmg: 75, speed: 60 };
 
-// 武器庫設定
 const weapons = {
     1: { name: "戰術手槍", maxAmmo: 12, ammo: 12, dmg: 35, fireRate: 250, auto: false, unlocked: true, price: 0, bulletColor: 0xffff00 },
     2: { name: "戰術散彈槍", maxAmmo: 6, ammo: 6, dmg: 25, count: 6, fireRate: 750, auto: false, unlocked: false, price: 150, bulletColor: 0xffa500 },
@@ -143,7 +147,6 @@ function init() {
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     document.body.appendChild(renderer.domElement);
 
-    // 初始化小地圖 Canvas
     minimapCanvas = document.getElementById('minimap');
     minimapCtx = minimapCanvas.getContext('2d');
 
@@ -188,9 +191,8 @@ function init() {
         if (e.button === 0) isMouseDown = false;
     });
 
-    // 定時在隨機位置生成醫藥包 (每 12 秒檢測一次，上限 3 個)
     setInterval(spawnMedkit, 12000);
-    spawnMedkit(); // 遊戲開始先生成 1 個
+    spawnMedkit();
 
     startNextWaveCountdown();
     animate();
@@ -228,11 +230,8 @@ function buildEnvironment() {
     }
 }
 
-// 建立 3D 醫藥包模型
 function createMedkitMesh() {
     const group = new THREE.Group();
-    
-    // 白盒本體
     const boxGeo = new THREE.BoxGeometry(0.8, 0.5, 0.6);
     const boxMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.3 });
     const box = new THREE.Mesh(boxGeo, boxMat);
@@ -240,7 +239,6 @@ function createMedkitMesh() {
     box.castShadow = true;
     group.add(box);
 
-    // 綠十字標誌
     const crossMat = new THREE.MeshBasicMaterial({ color: 0x00ff66 });
     const c1 = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.52, 0.12), crossMat);
     const c2 = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.52, 0.4), crossMat);
@@ -251,7 +249,6 @@ function createMedkitMesh() {
     return group;
 }
 
-// 在地圖上隨機生成醫藥包 (上限最多 3 個)
 function spawnMedkit() {
     if (medkits.length >= 3 || isGameOver) return;
 
@@ -261,7 +258,6 @@ function spawnMedkit() {
     mesh.position.set(rx, 0, rz);
 
     scene.add(mesh);
-    // 固定回復 20 血量
     medkits.push({ mesh, healAmount: 20 });
 }
 
@@ -512,11 +508,10 @@ function updateUI() {
     document.getElementById('ammo').innerText = `${w.ammo}/${w.maxAmmo}`;
 }
 
-// 繪製左下角矩形小地圖雷達
 function drawMinimap() {
     const width = minimapCanvas.width;
     const height = minimapCanvas.height;
-    const padding = 10;
+    const padding = 8;
     const drawWidth = width - padding * 2;
     const drawHeight = height - padding * 2;
 
@@ -532,36 +527,33 @@ function drawMinimap() {
     minimapCtx.lineWidth = 2;
     minimapCtx.strokeRect(padding, padding, drawWidth, drawHeight);
 
-    // 繪製醫藥包（綠點）
     medkits.forEach(m => {
         const p = mapToCanvas(m.mesh.position.x, m.mesh.position.z);
         minimapCtx.fillStyle = '#00ff66';
         minimapCtx.beginPath();
-        minimapCtx.arc(p.x, p.y, 3.5, 0, Math.PI * 2);
+        minimapCtx.arc(p.x, p.y, 3, 0, Math.PI * 2);
         minimapCtx.fill();
     });
 
-    // 繪製敵人紅點
     zombies.forEach(z => {
         const p = mapToCanvas(z.mesh.position.x, z.mesh.position.z);
         minimapCtx.fillStyle = z.isBoss ? '#ff00ff' : '#ff3333';
         minimapCtx.beginPath();
-        minimapCtx.arc(p.x, p.y, z.isBoss ? 4.5 : 2.5, 0, Math.PI * 2);
+        minimapCtx.arc(p.x, p.y, z.isBoss ? 4 : 2, 0, Math.PI * 2);
         minimapCtx.fill();
     });
 
-    // 繪製玩家位置與朝向
     const pPlayer = mapToCanvas(camera.position.x, camera.position.z);
 
     minimapCtx.fillStyle = '#ffffff';
     minimapCtx.beginPath();
-    minimapCtx.arc(pPlayer.x, pPlayer.y, 3.5, 0, Math.PI * 2);
+    minimapCtx.arc(pPlayer.x, pPlayer.y, 3, 0, Math.PI * 2);
     minimapCtx.fill();
 
     const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
-    const lineLen = 14;
+    const lineLen = 12;
     minimapCtx.strokeStyle = '#ffffff';
-    minimapCtx.lineWidth = 2;
+    minimapCtx.lineWidth = 1.5;
     minimapCtx.beginPath();
     minimapCtx.moveTo(pPlayer.x, pPlayer.y);
     minimapCtx.lineTo(pPlayer.x + forward.x * lineLen, pPlayer.y + forward.z * lineLen);
@@ -595,7 +587,6 @@ function animate() {
         shoot();
     }
 
-    // 1. 移動與邊界限制
     const dir = new THREE.Vector3();
     if (keys['w']) dir.z -= 1;
     if (keys['s']) dir.z += 1;
@@ -609,7 +600,6 @@ function animate() {
     camera.position.x = Math.max(-borderLimit, Math.min(borderLimit, camera.position.x));
     camera.position.z = Math.max(-borderLimit, Math.min(borderLimit, camera.position.z));
 
-    // 2. 醫藥包動態與觸碰拾取 (+20 血量)
     for (let i = medkits.length - 1; i >= 0; i--) {
         let m = medkits[i];
         m.mesh.rotation.y += 0.02;
@@ -625,7 +615,6 @@ function animate() {
         }
     }
 
-    // 3. 子彈擊中判定
     for (let i = bullets.length - 1; i >= 0; i--) {
         let b = bullets[i];
         b.mesh.position.addScaledVector(b.dir, 0.9);
@@ -675,7 +664,6 @@ function animate() {
         }
     }
 
-    // 4. 粒子更新
     for (let i = particles.length - 1; i >= 0; i--) {
         let p = particles[i];
         p.mesh.position.add(p.vel);
@@ -686,7 +674,6 @@ function animate() {
         }
     }
 
-    // 5. 殭屍 AI
     for (let i = zombies.length - 1; i >= 0; i--) {
         let z = zombies[i];
         
@@ -728,13 +715,11 @@ function animate() {
         }
     }
 
-    // 6. 波次推進
     if (killedZombiesInWave >= totalZombiesInWave && totalZombiesInWave > 0 && !waveTransitioning) {
         wave++;
         startNextWaveCountdown();
     }
 
-    // 7. 即時繪製小地圖
     drawMinimap();
 
     renderer.render(scene, camera);
