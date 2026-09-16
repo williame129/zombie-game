@@ -54,9 +54,9 @@
             font-size: 15px;
         }
 
-        tr:nth-child(1) .rank { color: #ffd700; font-weight: bold; font-size: 18px; } /* 金 */
-        tr:nth-child(2) .rank { color: #c0c0c0; font-weight: bold; font-size: 17px; } /* 銀 */
-        tr:nth-child(3) .rank { color: #cd7f32; font-weight: bold; font-size: 16px; } /* 銅 */
+        tr:nth-child(1) .rank { color: #ffd700; font-weight: bold; font-size: 18px; }
+        tr:nth-child(2) .rank { color: #c0c0c0; font-weight: bold; font-size: 17px; }
+        tr:nth-child(3) .rank { color: #cd7f32; font-weight: bold; font-size: 16px; }
 
         .player-name { font-weight: bold; color: #ffffff; }
         .stat-highlight { color: #ff5555; font-weight: bold; }
@@ -95,7 +95,6 @@
                 </tr>
             </thead>
             <tbody id="leaderboard-body">
-                <!-- 資料會自動填入此處 -->
             </tbody>
         </table>
 
@@ -103,21 +102,20 @@
     </div>
 
 <script>
-    // https://zombie-game-43de9-default-rtdb.asia-southeast1.firebasedatabase.app/
+    // Firebase 連線設定
     const firebaseConfig = {
-        databaseURL: "https://YOUR_DATABASE_URL.firebaseio.com/" 
+        databaseURL: "https://zombie-game-43de9-default-rtdb.asia-southeast1.firebasedatabase.app/" 
     };
 
     // 初始化 Firebase
     firebase.initializeApp(firebaseConfig);
     const database = firebase.database();
 
-    // 載入並顯示排行榜資料
+    // 載入排行榜資料
     function loadLeaderboard() {
         document.getElementById('loading').style.display = 'block';
         document.getElementById('leaderboard-table').style.display = 'none';
 
-        // 讀取 top_scores，依據 wave (波次) 排序，並取前 10 名
         const scoresRef = database.ref('top_scores').orderByChild('wave').limitToLast(10);
         
         scoresRef.once('value', (snapshot) => {
@@ -129,7 +127,6 @@
                 dataList.push(child.val());
             });
 
-            // Firebase 預設升冪，需要反轉為降冪 (波次高者在前)
             dataList.reverse();
 
             if (dataList.length === 0) {
@@ -153,12 +150,10 @@
         });
     }
 
-    // 防範 HTML 注入的小工具
     function escapeHtml(text) {
         return text.replace(/[&<>"']/g, function(m) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]; });
     }
 
-    // 網頁開啟時自動載入資料
     loadLeaderboard();
 </script>
 
