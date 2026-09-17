@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>屍境重構：廢墟決戰 v11.0</title>
+    <title>屍境重構：廢墟決戰 v12.1</title>
     <style>
         * { box-sizing: border-box; }
         html, body { width: 100%; height: 100%; margin: 0; padding: 0; overflow: hidden; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; user-select: none; background: #000; }
@@ -64,9 +64,9 @@
     <div id="difficulty-screen">
         <h1 style="font-size: 36px; margin-bottom: 10px; text-shadow: 0 0 10px #ff0000;">☣️ 屍境重構：廢墟決戰</h1>
         <p style="color: #aaa; margin-bottom: 30px;">請選擇遊戲難度以開始作戰</p>
-        <button class="btn diff-btn diff-easy" onclick="selectDifficulty('easy')">🟢 簡單 (Easy)<br><span style="font-size:12px; font-weight:normal;">首波10隻 | 基礎血量速度 100%</span></button>
-        <button class="btn diff-btn diff-medium" onclick="selectDifficulty('medium')">🟡 中等 (Medium)<br><span style="font-size:12px; font-weight:normal;">首波20隻 | 血量速度 150%</span></button>
-        <button class="btn diff-btn diff-hard" onclick="selectDifficulty('hard')">🔴 困難 (Hard)<br><span style="font-size:12px; font-weight:normal;">首波40隻 | 血量速度 225%</span></button>
+        <button class="btn diff-btn diff-easy" onclick="selectDifficulty('easy')">🟢 簡單 (Easy)<br><span style="font-size:12px; font-weight:normal;">首波10隻 | 速度 100% | 血量 100%</span></button>
+        <button class="btn diff-btn diff-medium" onclick="selectDifficulty('medium')">🟡 中等 (Medium)<br><span style="font-size:12px; font-weight:normal;">首波20隻 | 速度 110% | 血量 150%</span></button>
+        <button class="btn diff-btn diff-hard" onclick="selectDifficulty('hard')">🔴 困難 (Hard)<br><span style="font-size:12px; font-weight:normal;">首波30隻 | 速度 120% | 血量 225%</span></button>
     </div>
 
     <div id="damage-flash"></div>
@@ -77,7 +77,7 @@
         <div>👾 剩餘敵人: <span id="zombie-count" style="color: #ff4444; font-weight: bold;">0</span></div>
         <div>🎯 當前難度: <span id="difficulty-tag" style="font-weight: bold;">簡單</span></div>
         <div>🔫 武器: <span id="weapon">戰術手槍</span> (<span id="ammo">12/12</span>)</div>
-        <div style="font-size:12px; color:#aaa; margin-top:4px;">[WASD] 移動 | [空白鍵 Space] 跳躍 | [左鍵] 連射 | [1-6] 切換武器 | [R] 換彈 | [E] 商店</div>
+        <div style="font-size:12px; color:#aaa; margin-top:4px;">[WASD] 移動 | [空白鍵 Space] 跳躍 (可越過怪物) | [左鍵] 連射 | [1-6] 切換武器 | [R] 換彈 | [E] 商店</div>
     </div>
     
     <div id="minimap-container">
@@ -127,14 +127,12 @@ let totalZombiesInWave = 0, killedZombiesInWave = 0;
 let moveSpeed = 0.18, damageMult = 1.0;
 let fireRateMult = 1.0;
 
-// 難度參數
 let difficulty = 'easy';
 let diffMult = { hp: 1.0, speed: 1.0, initialZombies: 10, label: "🟢 簡單", color: "#00ff66" };
 
-// 跳躍相關變數
 let yVelocity = 0;
 const gravity = 0.015;
-const jumpStrength = 0.35;
+const jumpStrength = 0.38;
 let isGrounded = true;
 
 let lastReloadTime = 0;
@@ -167,9 +165,9 @@ function selectDifficulty(diff) {
     if (diff === 'easy') {
         diffMult = { hp: 1.0, speed: 1.0, initialZombies: 10, label: "🟢 簡單", color: "#00ff66" };
     } else if (diff === 'medium') {
-        diffMult = { hp: 1.5, speed: 1.5, initialZombies: 20, label: "🟡 中等", color: "#ffaa00" };
+        diffMult = { hp: 1.5, speed: 1.1, initialZombies: 20, label: "🟡 中等", color: "#ffaa00" };
     } else if (diff === 'hard') {
-        diffMult = { hp: 2.25, speed: 2.25, initialZombies: 40, label: "🔴 困難", color: "#ff3333" };
+        diffMult = { hp: 2.25, speed: 1.2, initialZombies: 30, label: "🔴 困難", color: "#ff3333" };
     }
 
     const tag = document.getElementById('difficulty-tag');
@@ -249,7 +247,6 @@ function init() {
     setInterval(spawnMedkit, 12000);
     spawnMedkit();
 
-    // 🤖 自動補彈系統
     setInterval(() => {
         if (hasAutoReload && !isGameOver) {
             const w = weapons[currentWeaponKey];
@@ -366,24 +363,25 @@ function spawnZombie(forceBoss = false) {
     let color = 0x2d5a27;
     let eyeColor = 0x00ffcc;
     let baseSpeed = 0.045;
-    let baseHp = 60 + (wave * 15);
+    let baseHp = 60;
     let scale = 1.0;
     let isBoss = false;
 
-    // Boss 敵人
     if (forceBoss || (wave % 5 === 0 && Math.random() < 0.2)) {
-        color = 0x800080; eyeColor = 0xff0055; baseSpeed = 0.022; baseHp = 600 + (wave * 120); scale = 2.4; isBoss = true;
+        color = 0x800080; eyeColor = 0xff0055; baseSpeed = 0.022; baseHp = 600; scale = 2.4; isBoss = true;
     } else if (wave >= 3 && type < 0.3) {
-        color = 0xccff00; eyeColor = 0xff0000; baseSpeed = 0.12; baseHp = 50 + (wave * 10); scale = 0.9;
+        color = 0xccff00; eyeColor = 0xff0000; baseSpeed = 0.12; baseHp = 50; scale = 0.9;
     } else if (type < 0.5) {
-        color = 0x8b0000; baseSpeed = 0.095; baseHp = 45 + (wave * 10);
+        color = 0x8b0000; baseSpeed = 0.095; baseHp = 45;
     } else if (type < 0.75) {
-        color = 0x223355; baseSpeed = 0.025; baseHp = 200 + (wave * 40); scale = 1.4;
+        color = 0x223355; baseSpeed = 0.025; baseHp = 200; scale = 1.4;
     }
 
-    // 套用難度加成倍率
+    // 🌊 隨波數持續成長機制：每波血量增加 8%、速度不增加
+    let waveScalingHp = 1 + (wave - 1) * 0.08;
+
     let speed = baseSpeed * diffMult.speed;
-    let zHp = baseHp * diffMult.hp;
+    let zHp = baseHp * diffMult.hp * waveScalingHp;
 
     const mesh = createZombieMesh(color, scale, eyeColor);
     const angle = Math.random() * Math.PI * 2;
@@ -400,6 +398,7 @@ function spawnZombie(forceBoss = false) {
     
     zombies.push({ 
         mesh, hp: zHp, maxHp: zHp, speed, scale, color, isBoss,
+        height: 1.8 * scale,
         strafeDir: (Math.random() < 0.5 ? 1 : -1),
         strafeTimer: Math.floor(Math.random() * 60),
         lastShootTime: Date.now()
@@ -440,7 +439,6 @@ function startNextWaveCountdown() {
 }
 
 function spawnWave() {
-    // 敵人數量公式：第 1 波由難度決定，之後為 (上次數量 * 1.3 + 3)
     if (wave === 1) {
         totalZombiesInWave = diffMult.initialZombies;
     } else {
@@ -457,7 +455,6 @@ function spawnWave() {
         spawned++;
     }
 
-    // 生成速度隨著波次加快，最短縮短至 150ms
     let spawnInterval = Math.max(150, 700 - (wave * 35));
 
     let timer = setInterval(() => {
@@ -731,7 +728,6 @@ function animate() {
         shoot();
     }
 
-    // 跳躍與重力運算
     camera.position.y += yVelocity;
     yVelocity -= gravity;
     if (camera.position.y <= 1.7) {
@@ -740,7 +736,6 @@ function animate() {
         isGrounded = true;
     }
 
-    // 水平移動
     const dir = new THREE.Vector3();
     if (keys['w']) dir.z -= 1;
     if (keys['s']) dir.z += 1;
@@ -769,7 +764,6 @@ function animate() {
         }
     }
 
-    // 玩家子彈邏輯
     for (let i = bullets.length - 1; i >= 0; i--) {
         let b = bullets[i];
         b.mesh.position.addScaledVector(b.dir, 0.9);
@@ -818,7 +812,6 @@ function animate() {
         }
     }
 
-    // 敵方 Boss 彈藥邏輯
     for (let i = enemyBullets.length - 1; i >= 0; i--) {
         let eb = enemyBullets[i];
         eb.mesh.position.addScaledVector(eb.dir, eb.speed);
@@ -855,13 +848,16 @@ function animate() {
         }
     }
 
-    // 殭屍邏輯
     for (let i = zombies.length - 1; i >= 0; i--) {
         let z = zombies[i];
         
         let forward = new THREE.Vector3().subVectors(camera.position, z.mesh.position);
+        
+        let horizontalDist = Math.sqrt(forward.x * forward.x + forward.z * forward.z);
+        let playerFootY = camera.position.y - 1.7;
+        let isPlayerAboveEnemy = playerFootY > (z.height - 0.2);
+
         forward.y = 0;
-        let distToPlayer = forward.length();
         forward.normalize();
 
         if (z.isBoss && Date.now() - z.lastShootTime > 2500) {
@@ -877,7 +873,7 @@ function animate() {
         let sideDir = new THREE.Vector3(-forward.z, 0, forward.x).multiplyScalar(z.strafeDir);
         let attackRange = 1.8 * z.scale;
 
-        if (distToPlayer > attackRange) {
+        if (horizontalDist > attackRange) {
             let moveDir = new THREE.Vector3()
                 .addScaledVector(forward, 0.85)
                 .addScaledVector(sideDir, 0.3)
@@ -888,7 +884,7 @@ function animate() {
         
         z.mesh.lookAt(camera.position.x, 0, camera.position.z);
 
-        if (distToPlayer <= attackRange + 0.3) {
+        if (horizontalDist <= attackRange + 0.3 && !isPlayerAboveEnemy) {
             let dmg = (z.isBoss ? 1.5 : 0.4) * (diffMult.hp * 0.8 + 0.2);
             hp -= dmg;
             updateUI();
