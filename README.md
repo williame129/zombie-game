@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>屍境重構：廢墟決戰 v10.0</title>
+    <title>屍境重構：廢墟決戰 v11.0</title>
     <style>
         * { box-sizing: border-box; }
         html, body { width: 100%; height: 100%; margin: 0; padding: 0; overflow: hidden; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; user-select: none; background: #000; }
@@ -30,15 +30,30 @@
         }
         #minimap { width: 100%; height: 100%; display: block; }
 
+        #difficulty-screen {
+            position: absolute; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(5, 5, 10, 0.95); color: white; display: flex;
+            flex-direction: column; justify-content: center; align-items: center;
+            z-index: 50; text-align: center;
+        }
+
         #shop { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(15, 15, 25, 0.95); color: white; padding: 20px; border-radius: 12px; display: none; text-align: center; border: 2px solid #ff4444; box-shadow: 0 0 20px rgba(255,68,68,0.4); z-index: 20; max-height: 85vh; width: 90%; max-width: 480px; overflow-y: auto; }
         
         #game-over-screen { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(20, 0, 0, 0.95); color: white; padding: 25px; border-radius: 15px; display: none; text-align: center; border: 3px solid #ff0000; box-shadow: 0 0 30px rgba(255,0,0,0.8); z-index: 30; width: 90%; max-width: 400px; }
         .stats-box { background: rgba(255,255,255,0.08); margin: 15px 0; padding: 15px; border-radius: 8px; text-align: left; line-height: 1.8; font-size: 15px; }
 
-        .btn { background: #222; color: white; border: 1px solid #ff4444; padding: 10px 16px; margin: 5px 0; cursor: pointer; font-size: 14px; border-radius: 6px; transition: 0.2s; width: 100%; }
+        .btn { background: #222; color: white; border: 1px solid #ff4444; padding: 10px 16px; margin: 6px 0; cursor: pointer; font-size: 14px; border-radius: 6px; transition: 0.2s; width: 100%; }
         .btn:hover { background: #ff4444; color: black; font-weight: bold; }
         .btn:disabled { background: #444; border-color: #666; color: #aaa; cursor: not-allowed; }
         
+        .diff-btn { font-size: 18px; padding: 15px 30px; width: 280px; margin: 10px; border-radius: 8px; font-weight: bold; }
+        .diff-easy { border-color: #00ff66; color: #00ff66; }
+        .diff-easy:hover { background: #00ff66; color: #000; }
+        .diff-medium { border-color: #ffaa00; color: #ffaa00; }
+        .diff-medium:hover { background: #ffaa00; color: #000; }
+        .diff-hard { border-color: #ff3333; color: #ff3333; }
+        .diff-hard:hover { background: #ff3333; color: #fff; }
+
         #msg { position: absolute; top: 15%; width: 100%; text-align: center; color: #ffeb3b; font-size: 26px; font-weight: bold; text-shadow: 3px 3px 6px #000; pointer-events: none; display: none; z-index: 10; padding: 0 10px; }
         #damage-flash { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(255,0,0,0.3); pointer-events: none; display: none; z-index: 5; }
     </style>
@@ -46,12 +61,21 @@
 </head>
 <body>
 
+    <div id="difficulty-screen">
+        <h1 style="font-size: 36px; margin-bottom: 10px; text-shadow: 0 0 10px #ff0000;">☣️ 屍境重構：廢墟決戰</h1>
+        <p style="color: #aaa; margin-bottom: 30px;">請選擇遊戲難度以開始作戰</p>
+        <button class="btn diff-btn diff-easy" onclick="selectDifficulty('easy')">🟢 簡單 (Easy)<br><span style="font-size:12px; font-weight:normal;">首波10隻 | 基礎血量速度 100%</span></button>
+        <button class="btn diff-btn diff-medium" onclick="selectDifficulty('medium')">🟡 中等 (Medium)<br><span style="font-size:12px; font-weight:normal;">首波20隻 | 血量速度 150%</span></button>
+        <button class="btn diff-btn diff-hard" onclick="selectDifficulty('hard')">🔴 困難 (Hard)<br><span style="font-size:12px; font-weight:normal;">首波40隻 | 血量速度 225%</span></button>
+    </div>
+
     <div id="damage-flash"></div>
     <div id="ui">
         <div>❤️ 血量: <span id="hp" style="color: #ff5555; font-weight: bold;">100</span></div>
         <div>💰 金幣: <span id="gold" style="color: #ffd700; font-weight: bold;">0</span></div>
         <div>🌊 當前波次: <span id="wave" style="color: #00ffff; font-weight: bold;">1</span></div>
         <div>👾 剩餘敵人: <span id="zombie-count" style="color: #ff4444; font-weight: bold;">0</span></div>
+        <div>🎯 當前難度: <span id="difficulty-tag" style="font-weight: bold;">簡單</span></div>
         <div>🔫 武器: <span id="weapon">戰術手槍</span> (<span id="ammo">12/12</span>)</div>
         <div style="font-size:12px; color:#aaa; margin-top:4px;">[WASD] 移動 | [空白鍵 Space] 跳躍 | [左鍵] 連射 | [1-6] 切換武器 | [R] 換彈 | [E] 商店</div>
     </div>
@@ -103,7 +127,11 @@ let totalZombiesInWave = 0, killedZombiesInWave = 0;
 let moveSpeed = 0.18, damageMult = 1.0;
 let fireRateMult = 1.0;
 
-// 🦘 跳躍相關變數
+// 難度參數
+let difficulty = 'easy';
+let diffMult = { hp: 1.0, speed: 1.0, initialZombies: 10, label: "🟢 簡單", color: "#00ff66" };
+
+// 跳躍相關變數
 let yVelocity = 0;
 const gravity = 0.015;
 const jumpStrength = 0.35;
@@ -133,6 +161,24 @@ const weapons = {
     6: { name: "快速離子電漿毀滅者", maxAmmo: 40, ammo: 40, dmg: 110, count: 2, baseFireRate: 93, fireRate: 93, auto: true, unlocked: false, price: 2500, bulletColor: 0x00ffaa }
 };
 let currentWeaponKey = 1;
+
+function selectDifficulty(diff) {
+    difficulty = diff;
+    if (diff === 'easy') {
+        diffMult = { hp: 1.0, speed: 1.0, initialZombies: 10, label: "🟢 簡單", color: "#00ff66" };
+    } else if (diff === 'medium') {
+        diffMult = { hp: 1.5, speed: 1.5, initialZombies: 20, label: "🟡 中等", color: "#ffaa00" };
+    } else if (diff === 'hard') {
+        diffMult = { hp: 2.25, speed: 2.25, initialZombies: 40, label: "🔴 困難", color: "#ff3333" };
+    }
+
+    const tag = document.getElementById('difficulty-tag');
+    tag.innerText = diffMult.label;
+    tag.style.color = diffMult.color;
+
+    document.getElementById('difficulty-screen').style.display = 'none';
+    init();
+}
 
 function init() {
     scene = new THREE.Scene();
@@ -166,7 +212,6 @@ function init() {
     document.addEventListener('keydown', (e) => {
         if (isGameOver) return;
         
-        // 跳躍邏輯 (Space)
         if (e.code === 'Space') {
             if (isGrounded) {
                 yVelocity = jumpStrength;
@@ -320,21 +365,25 @@ function spawnZombie(forceBoss = false) {
     let type = Math.random();
     let color = 0x2d5a27;
     let eyeColor = 0x00ffcc;
-    let speed = 0.045;
-    let zHp = 60 + (wave * 15);
+    let baseSpeed = 0.045;
+    let baseHp = 60 + (wave * 15);
     let scale = 1.0;
     let isBoss = false;
 
-    // 👹 每 5 波生成超級 Boss (可發射彈藥)
+    // Boss 敵人
     if (forceBoss || (wave % 5 === 0 && Math.random() < 0.2)) {
-        color = 0x800080; eyeColor = 0xff0055; speed = 0.022; zHp = 600 + (wave * 120); scale = 2.4; isBoss = true;
+        color = 0x800080; eyeColor = 0xff0055; baseSpeed = 0.022; baseHp = 600 + (wave * 120); scale = 2.4; isBoss = true;
     } else if (wave >= 3 && type < 0.3) {
-        color = 0xccff00; eyeColor = 0xff0000; speed = 0.12; zHp = 50 + (wave * 10); scale = 0.9;
+        color = 0xccff00; eyeColor = 0xff0000; baseSpeed = 0.12; baseHp = 50 + (wave * 10); scale = 0.9;
     } else if (type < 0.5) {
-        color = 0x8b0000; speed = 0.095; zHp = 45 + (wave * 10);
+        color = 0x8b0000; baseSpeed = 0.095; baseHp = 45 + (wave * 10);
     } else if (type < 0.75) {
-        color = 0x223355; speed = 0.025; zHp = 200 + (wave * 40); scale = 1.4;
+        color = 0x223355; baseSpeed = 0.025; baseHp = 200 + (wave * 40); scale = 1.4;
     }
+
+    // 套用難度加成倍率
+    let speed = baseSpeed * diffMult.speed;
+    let zHp = baseHp * diffMult.hp;
 
     const mesh = createZombieMesh(color, scale, eyeColor);
     const angle = Math.random() * Math.PI * 2;
@@ -357,7 +406,6 @@ function spawnZombie(forceBoss = false) {
     });
 }
 
-// 👹 Boss 攻擊發射彈藥
 function bossShoot(boss) {
     const startPos = boss.mesh.position.clone().add(new THREE.Vector3(0, 1.5 * boss.scale, 0));
     const targetPos = camera.position.clone();
@@ -368,7 +416,7 @@ function bossShoot(boss) {
     const bullet = new THREE.Mesh(geo, mat);
     bullet.position.copy(startPos);
 
-    enemyBullets.push({ mesh: bullet, dir, speed: 0.35, life: 120, damage: 20 });
+    enemyBullets.push({ mesh: bullet, dir, speed: 0.35, life: 120, damage: 20 * diffMult.hp });
     scene.add(bullet);
 }
 
@@ -392,17 +440,25 @@ function startNextWaveCountdown() {
 }
 
 function spawnWave() {
-    totalZombiesInWave = 5 + wave * 4;
+    // 敵人數量公式：第 1 波由難度決定，之後為 (上次數量 * 1.3 + 3)
+    if (wave === 1) {
+        totalZombiesInWave = diffMult.initialZombies;
+    } else {
+        totalZombiesInWave = Math.floor(totalZombiesInWave * 1.3 + 3);
+    }
+    
     killedZombiesInWave = 0;
     updateUI();
 
     let spawned = 0;
     
-    // 如果是每 5 波，首隻強制生成 Boss
     if (wave % 5 === 0) {
         spawnZombie(true);
         spawned++;
     }
+
+    // 生成速度隨著波次加快，最短縮短至 150ms
+    let spawnInterval = Math.max(150, 700 - (wave * 35));
 
     let timer = setInterval(() => {
         if (spawned < totalZombiesInWave && !isPaused && !isGameOver) {
@@ -411,7 +467,7 @@ function spawnWave() {
         } else if (spawned >= totalZombiesInWave) {
             clearInterval(timer);
         }
-    }, 700);
+    }, spawnInterval);
 }
 
 function createHitParticles(pos, colorHex) {
@@ -675,7 +731,7 @@ function animate() {
         shoot();
     }
 
-    // 🦘 跳躍與重力運算
+    // 跳躍與重力運算
     camera.position.y += yVelocity;
     yVelocity -= gravity;
     if (camera.position.y <= 1.7) {
@@ -713,7 +769,7 @@ function animate() {
         }
     }
 
-    // 玩家玩家子彈邏輯
+    // 玩家子彈邏輯
     for (let i = bullets.length - 1; i >= 0; i--) {
         let b = bullets[i];
         b.mesh.position.addScaledVector(b.dir, 0.9);
@@ -762,13 +818,12 @@ function animate() {
         }
     }
 
-    // 👾 敵方 Boss 彈藥邏輯
+    // 敵方 Boss 彈藥邏輯
     for (let i = enemyBullets.length - 1; i >= 0; i--) {
         let eb = enemyBullets[i];
         eb.mesh.position.addScaledVector(eb.dir, eb.speed);
         eb.life--;
 
-        // 判定碰撞玩家
         if (eb.mesh.position.distanceTo(camera.position) < 1.2) {
             hp -= eb.damage;
             updateUI();
@@ -800,7 +855,7 @@ function animate() {
         }
     }
 
-    // 殭屍與 Boss 邏輯
+    // 殭屍邏輯
     for (let i = zombies.length - 1; i >= 0; i--) {
         let z = zombies[i];
         
@@ -809,7 +864,6 @@ function animate() {
         let distToPlayer = forward.length();
         forward.normalize();
 
-        // 👹 Boss 定期發射彈藥
         if (z.isBoss && Date.now() - z.lastShootTime > 2500) {
             z.lastShootTime = Date.now();
             bossShoot(z);
@@ -835,7 +889,8 @@ function animate() {
         z.mesh.lookAt(camera.position.x, 0, camera.position.z);
 
         if (distToPlayer <= attackRange + 0.3) {
-            hp -= z.isBoss ? 1.5 : 0.4;
+            let dmg = (z.isBoss ? 1.5 : 0.4) * (diffMult.hp * 0.8 + 0.2);
+            hp -= dmg;
             updateUI();
             
             const flash = document.getElementById('damage-flash');
@@ -859,12 +914,12 @@ function animate() {
 }
 
 window.addEventListener('resize', () => {
-    camera.aspect = window.innerWidth / window.innerHeight;
-    camera.updateProjectionMatrix();
-    renderer.setSize(window.innerWidth, window.innerHeight);
+    if (camera && renderer) {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+    }
 });
-
-init();
 </script>
 </body>
 </html>
