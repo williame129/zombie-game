@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>屍境重構：廢墟決戰 v12.2</title>
+    <title>屍境重構：廢墟決戰 v13.0</title>
     <style>
         * { box-sizing: border-box; }
         html, body { width: 100%; height: 100%; margin: 0; padding: 0; overflow: hidden; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; user-select: none; background: #000; }
@@ -54,7 +54,8 @@
         .diff-hard { border-color: #ff3333; color: #ff3333; }
         .diff-hard:hover { background: #ff3333; color: #fff; }
 
-        #msg { position: absolute; top: 15%; width: 100%; text-align: center; color: #ffeb3b; font-size: 26px; font-weight: bold; text-shadow: 3px 3px 6px #000; pointer-events: none; display: none; z-index: 10; padding: 0 10px; }
+        #msg { position: absolute; top: 12%; width: 100%; text-align: center; color: #ffeb3b; font-size: 26px; font-weight: bold; text-shadow: 3px 3px 6px #000; pointer-events: none; display: none; z-index: 10; padding: 0 10px; }
+        #drop-msg { position: absolute; top: 22%; width: 100%; text-align: center; color: #00ffff; font-size: 24px; font-weight: bold; text-shadow: 0 0 10px #00ffff, 2px 2px 4px #000; pointer-events: none; display: none; z-index: 10; padding: 0 10px; }
         #damage-flash { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(255,0,0,0.3); pointer-events: none; display: none; z-index: 5; }
     </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -77,7 +78,7 @@
         <div>👾 剩餘敵人: <span id="zombie-count" style="color: #ff4444; font-weight: bold;">0</span></div>
         <div>🎯 當前難度: <span id="difficulty-tag" style="font-weight: bold;">簡單</span></div>
         <div>🔫 武器: <span id="weapon">戰術手槍</span> (<span id="ammo">12/12</span>)</div>
-        <div style="font-size:12px; color:#aaa; margin-top:4px;">[WASD] 移動 | [滑鼠] 360度全景視角 | [空白鍵 Space] 跳躍 | [左鍵] 連射 | [1-6] 切換武器 | [R] 換彈 | [E] 商店</div>
+        <div style="font-size:12px; color:#aaa; margin-top:4px;">[WASD] 移動 | [滑鼠] 水平旋轉視角 | [空白鍵 Space] 跳躍 | [左鍵] 連射 | [1-6] 切換武器 | [R] 換彈 | [E] 商店</div>
     </div>
     
     <div id="minimap-container">
@@ -86,6 +87,7 @@
 
     <div id="crosshair"></div>
     <div id="msg">戰鬥準備開始！</div>
+    <div id="drop-msg">🎁 獲得幸運升級！</div>
 
     <div id="shop">
         <h2 style="font-size: 20px; margin-top:0;">🛒 軍火庫與技能升級 (按 E 關閉)</h2>
@@ -122,7 +124,6 @@
 
 <script>
 let scene, camera, renderer;
-let pitchObject, yawObject; // 全景視角控制物件
 let hp = 100, maxHp = 100, gold = 0, wave = 1;
 let totalZombiesInWave = 0, killedZombiesInWave = 0;
 let moveSpeed = 0.18, damageMult = 1.0;
@@ -185,15 +186,7 @@ function init() {
     scene.fog = new THREE.FogExp2(0x0a0a12, 0.02);
 
     camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-    
-    // 全景視角控制結構 Setup (FPS-style Pitch/Yaw objects)
-    pitchObject = new THREE.Object3D();
-    pitchObject.add(camera);
-
-    yawObject = new THREE.Object3D();
-    yawObject.position.y = 1.7;
-    yawObject.add(pitchObject);
-    scene.add(yawObject);
+    camera.position.set(0, 1.7, 0);
 
     renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
@@ -237,17 +230,10 @@ function init() {
         if (!isPaused && !isGameOver) document.body.requestPointerLock();
     });
     
-    // 全景視角旋轉（水平 Yaw 與 垂直 Pitch）
+    // 恢復為原本僅水平左右旋轉
     document.addEventListener('mousemove', (e) => {
         if (document.pointerLockElement === document.body && !isPaused && !isGameOver) {
-            const movementX = e.movementX || 0;
-            const movementY = e.movementY || 0;
-
-            yawObject.rotation.y -= movementX * 0.0022;
-            pitchObject.rotation.x -= movementY * 0.0022;
-
-            // 限制仰俯角防止旋轉翻轉 (近 ±90度)
-            pitchObject.rotation.x = Math.max(-Math.PI / 2 + 0.01, Math.min(Math.PI / 2 - 0.01, pitchObject.rotation.x));
+            camera.rotation.y -= e.movementX * 0.0022;
         }
     });
 
@@ -376,7 +362,6 @@ function createZombieMesh(color, scale, eyeColor = 0x00ffcc) {
 }
 
 function spawnZombie(forceBoss = false) {
-    let type = Math.random();
     let color = 0x2d5a27;
     let eyeColor = 0x00ffcc;
     let baseSpeed = 0.045;
@@ -384,17 +369,31 @@ function spawnZombie(forceBoss = false) {
     let scale = 1.0;
     let isBoss = false;
 
+    // 🧬 隨波數持續成長與進化機制
+    let waveScalingHp = 1 + (wave - 1) * 0.08;
+    let evoChance = Math.min(0.8, (wave - 1) * 0.08); // 隨波數提升進化機率
+
     if (forceBoss || (wave % 5 === 0 && Math.random() < 0.2)) {
         color = 0x800080; eyeColor = 0xff0055; baseSpeed = 0.022; baseHp = 600; scale = 2.4; isBoss = true;
-    } else if (wave >= 3 && type < 0.3) {
-        color = 0xccff00; eyeColor = 0xff0000; baseSpeed = 0.12; baseHp = 50; scale = 0.9;
-    } else if (type < 0.5) {
-        color = 0x8b0000; baseSpeed = 0.095; baseHp = 45;
-    } else if (type < 0.75) {
-        color = 0x223355; baseSpeed = 0.025; baseHp = 200; scale = 1.4;
-    }
+    } else if (Math.random() < evoChance) {
+        // 殭屍進化能力庫
+        let evos = ['speed', 'tank', 'toxic'];
+        if (wave >= 8) evos.push('void');
+        let chosenEvo = evos[Math.floor(Math.random() * evos.length)];
 
-    let waveScalingHp = 1 + (wave - 1) * 0.08;
+        if (chosenEvo === 'speed') { // 疾速狂暴
+            color = 0xffaa00; eyeColor = 0xffff00; baseSpeed = 0.11 + (wave * 0.003); baseHp = 45; scale = 0.95;
+        } else if (chosenEvo === 'tank') { // 鋼鐵裝甲
+            color = 0x334455; eyeColor = 0x00ffff; baseSpeed = 0.03; baseHp = 180; scale = 1.5;
+        } else if (chosenEvo === 'toxic') { // 毒素自爆型
+            color = 0x00ff55; eyeColor = 0xff00ff; baseSpeed = 0.07; baseHp = 70; scale = 1.1;
+        } else if (chosenEvo === 'void') { // 虛空狂暴
+            color = 0x8800ff; eyeColor = 0xffffff; baseSpeed = 0.10; baseHp = 250; scale = 1.3;
+        }
+    } else {
+        // 一般型殭屍隨波數輕微加速
+        baseSpeed += Math.min(0.04, wave * 0.001);
+    }
 
     let speed = baseSpeed * diffMult.speed;
     let zHp = baseHp * diffMult.hp * waveScalingHp;
@@ -403,9 +402,9 @@ function spawnZombie(forceBoss = false) {
     const angle = Math.random() * Math.PI * 2;
     const dist = 15 + Math.random() * (MAP_SIZE - 20);
     mesh.position.set(
-        yawObject.position.x + Math.cos(angle) * dist,
+        camera.position.x + Math.cos(angle) * dist,
         0,
-        yawObject.position.z + Math.sin(angle) * dist
+        camera.position.z + Math.sin(angle) * dist
     );
     mesh.position.x = Math.max(-MAP_SIZE+2, Math.min(MAP_SIZE-2, mesh.position.x));
     mesh.position.z = Math.max(-MAP_SIZE+2, Math.min(MAP_SIZE-2, mesh.position.z));
@@ -423,7 +422,7 @@ function spawnZombie(forceBoss = false) {
 
 function bossShoot(boss) {
     const startPos = boss.mesh.position.clone().add(new THREE.Vector3(0, 1.5 * boss.scale, 0));
-    const targetPos = yawObject.position.clone();
+    const targetPos = camera.position.clone();
     const dir = new THREE.Vector3().subVectors(targetPos, startPos).normalize();
 
     const geo = new THREE.SphereGeometry(0.3);
@@ -471,12 +470,9 @@ function spawnWave() {
         spawned++;
     }
 
-    // ⚡ 怪物生成速限：全部怪物生成時間不超過 20 秒 (可突破 1 秒 5 隻的上限)
-    let maxTotalSpawnTime = 20000; // 最多 20 秒
+    let maxTotalSpawnTime = 20000;
     let baseInterval = Math.max(150, 700 - (wave * 35));
     let requiredInterval = maxTotalSpawnTime / totalZombiesInWave;
-    
-    // 取較短者作為生成間隔，確保 20 秒內完成生成
     let spawnInterval = Math.min(baseInterval, requiredInterval);
 
     let timer = setInterval(() => {
@@ -516,21 +512,14 @@ function shoot() {
     w.ammo--;
     updateUI();
 
-    // 取得相機全景世界方向與位置
-    const worldDir = new THREE.Vector3();
-    camera.getWorldDirection(worldDir);
-
-    const worldPos = new THREE.Vector3();
-    camera.getWorldPosition(worldPos);
-
     const createBullet = (dirOffset = new THREE.Vector3()) => {
         const geo = new THREE.SphereGeometry((currentWeaponKey === 5 || currentWeaponKey === 6) ? 0.2 : 0.08);
         const mat = new THREE.MeshBasicMaterial({ color: w.bulletColor });
         const bullet = new THREE.Mesh(geo, mat);
-        bullet.position.copy(worldPos).add(new THREE.Vector3(0, -0.2, 0));
+        bullet.position.copy(camera.position).add(new THREE.Vector3(0, -0.2, 0));
 
-        const finalDir = worldDir.clone().add(dirOffset).normalize();
-        bullets.push({ mesh: bullet, dir: finalDir, damage: w.dmg * damageMult, life: 60, color: w.bulletColor });
+        const dir = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion).add(dirOffset).normalize();
+        bullets.push({ mesh: bullet, dir: dir, damage: w.dmg * damageMult, life: 60, color: w.bulletColor });
         scene.add(bullet);
     };
 
@@ -542,6 +531,49 @@ function shoot() {
     } else {
         createBullet();
     }
+}
+
+function triggerLuckyDrop() {
+    // 🎁 1% 掉落幸運升級庫
+    const drops = ['hp', 'dmg', 'speed', 'firerate', 'ammo', 'gold'];
+    const type = drops[Math.floor(Math.random() * drops.length)];
+    let text = "";
+
+    if (type === 'hp') {
+        maxHp += 20; hp = Math.min(maxHp, hp + 30);
+        text = "🎁 幸運掉落：生命值上限 +20 & 回復 30 HP！";
+    } else if (type === 'dmg') {
+        damageMult += 0.15;
+        text = "🎁 幸運掉落：武器整體傷害 +15%！";
+    } else if (type === 'speed') {
+        moveSpeed += 0.02;
+        text = "🎁 幸運掉落：機動速度 +10%！";
+    } else if (type === 'firerate') {
+        fireRateMult *= 0.90;
+        for (let k in weapons) weapons[k].fireRate = weapons[k].baseFireRate * fireRateMult;
+        text = "🎁 幸運掉落：全武器射速提升 10%！";
+    } else if (type === 'ammo') {
+        for (let k in weapons) {
+            weapons[k].maxAmmo += 5;
+            weapons[k].ammo = weapons[k].maxAmmo;
+        }
+        text = "🎁 幸運掉落：全武器彈藥容量 +5！";
+    } else if (type === 'gold') {
+        let bonusGold = 200 + wave * 50;
+        gold += bonusGold;
+        totalGoldEarned += bonusGold;
+        text = `🎁 幸運掉落：獲得額外金幣 💰 ${bonusGold}！`;
+    }
+
+    showDropMsg(text);
+    updateUI();
+}
+
+function showDropMsg(txt) {
+    const dropMsg = document.getElementById('drop-msg');
+    dropMsg.innerText = txt;
+    dropMsg.style.display = 'block';
+    setTimeout(() => { dropMsg.style.display = 'none'; }, 3000);
 }
 
 function reloadAmmo() {
@@ -715,15 +747,14 @@ function drawMinimap() {
         minimapCtx.fill();
     });
 
-    const pPlayer = mapToCanvas(yawObject.position.x, yawObject.position.z);
+    const pPlayer = mapToCanvas(camera.position.x, camera.position.z);
 
     minimapCtx.fillStyle = '#ffffff';
     minimapCtx.beginPath();
     minimapCtx.arc(pPlayer.x, pPlayer.y, 3, 0, Math.PI * 2);
     minimapCtx.fill();
 
-    const forward = new THREE.Vector3();
-    camera.getWorldDirection(forward);
+    const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
     const lineLen = 12;
     minimapCtx.strokeStyle = '#ffffff';
     minimapCtx.lineWidth = 1.5;
@@ -758,36 +789,33 @@ function animate() {
         shoot();
     }
 
-    yawObject.position.y += yVelocity;
+    camera.position.y += yVelocity;
     yVelocity -= gravity;
-    if (yawObject.position.y <= 1.7) {
-        yawObject.position.y = 1.7;
+    if (camera.position.y <= 1.7) {
+        camera.position.y = 1.7;
         yVelocity = 0;
         isGrounded = true;
     }
 
-    // WASD 平面移動 (根據 yawObject 的水平朝向)
-    const moveDir = new THREE.Vector3();
-    if (keys['w']) moveDir.z -= 1;
-    if (keys['s']) moveDir.z += 1;
-    if (keys['a']) moveDir.x -= 1;
-    if (keys['d']) moveDir.x += 1;
-    moveDir.normalize().applyQuaternion(yawObject.quaternion);
-    moveDir.y = 0;
-    yawObject.position.addScaledVector(moveDir, moveSpeed);
+    const dir = new THREE.Vector3();
+    if (keys['w']) dir.z -= 1;
+    if (keys['s']) dir.z += 1;
+    if (keys['a']) dir.x -= 1;
+    if (keys['d']) dir.x += 1;
+    dir.normalize().applyQuaternion(camera.quaternion);
+    dir.y = 0;
+    camera.position.addScaledVector(dir, moveSpeed);
 
     const borderLimit = MAP_SIZE - 1.5;
-    yawObject.position.x = Math.max(-borderLimit, Math.min(borderLimit, yawObject.position.x));
-    yawObject.position.z = Math.max(-borderLimit, Math.min(borderLimit, yawObject.position.z));
-
-    const playerWorldPos = yawObject.position.clone();
+    camera.position.x = Math.max(-borderLimit, Math.min(borderLimit, camera.position.x));
+    camera.position.z = Math.max(-borderLimit, Math.min(borderLimit, camera.position.z));
 
     for (let i = medkits.length - 1; i >= 0; i--) {
         let m = medkits[i];
         m.mesh.rotation.y += 0.02;
         m.mesh.position.y = 0.2 + Math.sin(Date.now() * 0.003) * 0.1;
 
-        if (playerWorldPos.distanceTo(m.mesh.position) < 2.5) {
+        if (camera.position.distanceTo(m.mesh.position) < 2.5) {
             hp = Math.min(maxHp, hp + m.healAmount);
             showMsg(`💚 拾取醫藥包，回復了 ${m.healAmount} 點血量！`);
             updateUI();
@@ -833,6 +861,12 @@ function animate() {
                     let earned = z.isBoss ? 250 : 25 + wave * 2;
                     gold += earned;
                     totalGoldEarned += earned;
+
+                    // 🎲 1% 幾率掉落幸運升級
+                    if (Math.random() < 0.01) {
+                        triggerLuckyDrop();
+                    }
+
                     updateUI();
                 }
                 break;
@@ -850,7 +884,7 @@ function animate() {
         eb.mesh.position.addScaledVector(eb.dir, eb.speed);
         eb.life--;
 
-        if (eb.mesh.position.distanceTo(playerWorldPos) < 1.2) {
+        if (eb.mesh.position.distanceTo(camera.position) < 1.2) {
             hp -= eb.damage;
             updateUI();
 
@@ -884,10 +918,10 @@ function animate() {
     for (let i = zombies.length - 1; i >= 0; i--) {
         let z = zombies[i];
         
-        let forward = new THREE.Vector3().subVectors(playerWorldPos, z.mesh.position);
+        let forward = new THREE.Vector3().subVectors(camera.position, z.mesh.position);
         
         let horizontalDist = Math.sqrt(forward.x * forward.x + forward.z * forward.z);
-        let playerFootY = playerWorldPos.y - 1.7;
+        let playerFootY = camera.position.y - 1.7;
         let isPlayerAboveEnemy = playerFootY > (z.height - 0.2);
 
         forward.y = 0;
@@ -915,7 +949,7 @@ function animate() {
             z.mesh.position.addScaledVector(moveDirZ, z.speed);
         }
         
-        z.mesh.lookAt(playerWorldPos.x, 0, playerWorldPos.z);
+        z.mesh.lookAt(camera.position.x, 0, camera.position.z);
 
         if (horizontalDist <= attackRange + 0.3 && !isPlayerAboveEnemy) {
             let dmg = (z.isBoss ? 1.5 : 0.4) * (diffMult.hp * 0.8 + 0.2);
