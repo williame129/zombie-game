@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>屍境重構：廢墟決戰 v12.1</title>
+    <title>屍境重構：廢墟決戰 v12.2</title>
     <style>
         * { box-sizing: border-box; }
         html, body { width: 100%; height: 100%; margin: 0; padding: 0; overflow: hidden; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; user-select: none; background: #000; }
@@ -77,7 +77,7 @@
         <div>👾 剩餘敵人: <span id="zombie-count" style="color: #ff4444; font-weight: bold;">0</span></div>
         <div>🎯 當前難度: <span id="difficulty-tag" style="font-weight: bold;">簡單</span></div>
         <div>🔫 武器: <span id="weapon">戰術手槍</span> (<span id="ammo">12/12</span>)</div>
-        <div style="font-size:12px; color:#aaa; margin-top:4px;">[WASD] 移動 | [空白鍵 Space] 跳躍 (可越過怪物) | [左鍵] 連射 | [1-6] 切換武器 | [R] 換彈 | [E] 商店</div>
+        <div style="font-size:12px; color:#aaa; margin-top:4px;">[WASD] 移動 | [滑鼠] 360度全景視角 | [空白鍵 Space] 跳躍 | [左鍵] 連射 | [1-6] 切換武器 | [R] 換彈 | [E] 商店</div>
     </div>
     
     <div id="minimap-container">
@@ -122,6 +122,7 @@
 
 <script>
 let scene, camera, renderer;
+let pitchObject, yawObject; // 全景視角控制物件
 let hp = 100, maxHp = 100, gold = 0, wave = 1;
 let totalZombiesInWave = 0, killedZombiesInWave = 0;
 let moveSpeed = 0.18, damageMult = 1.0;
@@ -184,7 +185,15 @@ function init() {
     scene.fog = new THREE.FogExp2(0x0a0a12, 0.02);
 
     camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-    camera.position.set(0, 1.7, 0);
+    
+    // 全景視角控制結構 Setup (FPS-style Pitch/Yaw objects)
+    pitchObject = new THREE.Object3D();
+    pitchObject.add(camera);
+
+    yawObject = new THREE.Object3D();
+    yawObject.position.y = 1.7;
+    yawObject.add(pitchObject);
+    scene.add(yawObject);
 
     renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
@@ -228,9 +237,17 @@ function init() {
         if (!isPaused && !isGameOver) document.body.requestPointerLock();
     });
     
+    // 全景視角旋轉（水平 Yaw 與 垂直 Pitch）
     document.addEventListener('mousemove', (e) => {
         if (document.pointerLockElement === document.body && !isPaused && !isGameOver) {
-            camera.rotation.y -= e.movementX * 0.0022;
+            const movementX = e.movementX || 0;
+            const movementY = e.movementY || 0;
+
+            yawObject.rotation.y -= movementX * 0.0022;
+            pitchObject.rotation.x -= movementY * 0.0022;
+
+            // 限制仰俯角防止旋轉翻轉 (近 ±90度)
+            pitchObject.rotation.x = Math.max(-Math.PI / 2 + 0.01, Math.min(Math.PI / 2 - 0.01, pitchObject.rotation.x));
         }
     });
 
@@ -377,7 +394,6 @@ function spawnZombie(forceBoss = false) {
         color = 0x223355; baseSpeed = 0.025; baseHp = 200; scale = 1.4;
     }
 
-    // 🌊 隨波數持續成長機制：每波血量增加 8%、速度不增加
     let waveScalingHp = 1 + (wave - 1) * 0.08;
 
     let speed = baseSpeed * diffMult.speed;
@@ -387,9 +403,9 @@ function spawnZombie(forceBoss = false) {
     const angle = Math.random() * Math.PI * 2;
     const dist = 15 + Math.random() * (MAP_SIZE - 20);
     mesh.position.set(
-        camera.position.x + Math.cos(angle) * dist,
+        yawObject.position.x + Math.cos(angle) * dist,
         0,
-        camera.position.z + Math.sin(angle) * dist
+        yawObject.position.z + Math.sin(angle) * dist
     );
     mesh.position.x = Math.max(-MAP_SIZE+2, Math.min(MAP_SIZE-2, mesh.position.x));
     mesh.position.z = Math.max(-MAP_SIZE+2, Math.min(MAP_SIZE-2, mesh.position.z));
@@ -407,7 +423,7 @@ function spawnZombie(forceBoss = false) {
 
 function bossShoot(boss) {
     const startPos = boss.mesh.position.clone().add(new THREE.Vector3(0, 1.5 * boss.scale, 0));
-    const targetPos = camera.position.clone();
+    const targetPos = yawObject.position.clone();
     const dir = new THREE.Vector3().subVectors(targetPos, startPos).normalize();
 
     const geo = new THREE.SphereGeometry(0.3);
@@ -455,7 +471,13 @@ function spawnWave() {
         spawned++;
     }
 
-    let spawnInterval = Math.max(150, 700 - (wave * 35));
+    // ⚡ 怪物生成速限：全部怪物生成時間不超過 20 秒 (可突破 1 秒 5 隻的上限)
+    let maxTotalSpawnTime = 20000; // 最多 20 秒
+    let baseInterval = Math.max(150, 700 - (wave * 35));
+    let requiredInterval = maxTotalSpawnTime / totalZombiesInWave;
+    
+    // 取較短者作為生成間隔，確保 20 秒內完成生成
+    let spawnInterval = Math.min(baseInterval, requiredInterval);
 
     let timer = setInterval(() => {
         if (spawned < totalZombiesInWave && !isPaused && !isGameOver) {
@@ -494,14 +516,21 @@ function shoot() {
     w.ammo--;
     updateUI();
 
+    // 取得相機全景世界方向與位置
+    const worldDir = new THREE.Vector3();
+    camera.getWorldDirection(worldDir);
+
+    const worldPos = new THREE.Vector3();
+    camera.getWorldPosition(worldPos);
+
     const createBullet = (dirOffset = new THREE.Vector3()) => {
         const geo = new THREE.SphereGeometry((currentWeaponKey === 5 || currentWeaponKey === 6) ? 0.2 : 0.08);
         const mat = new THREE.MeshBasicMaterial({ color: w.bulletColor });
         const bullet = new THREE.Mesh(geo, mat);
-        bullet.position.copy(camera.position).add(new THREE.Vector3(0, -0.2, 0));
+        bullet.position.copy(worldPos).add(new THREE.Vector3(0, -0.2, 0));
 
-        const dir = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion).add(dirOffset).normalize();
-        bullets.push({ mesh: bullet, dir: dir, damage: w.dmg * damageMult, life: 60, color: w.bulletColor });
+        const finalDir = worldDir.clone().add(dirOffset).normalize();
+        bullets.push({ mesh: bullet, dir: finalDir, damage: w.dmg * damageMult, life: 60, color: w.bulletColor });
         scene.add(bullet);
     };
 
@@ -686,14 +715,15 @@ function drawMinimap() {
         minimapCtx.fill();
     });
 
-    const pPlayer = mapToCanvas(camera.position.x, camera.position.z);
+    const pPlayer = mapToCanvas(yawObject.position.x, yawObject.position.z);
 
     minimapCtx.fillStyle = '#ffffff';
     minimapCtx.beginPath();
     minimapCtx.arc(pPlayer.x, pPlayer.y, 3, 0, Math.PI * 2);
     minimapCtx.fill();
 
-    const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
+    const forward = new THREE.Vector3();
+    camera.getWorldDirection(forward);
     const lineLen = 12;
     minimapCtx.strokeStyle = '#ffffff';
     minimapCtx.lineWidth = 1.5;
@@ -728,33 +758,36 @@ function animate() {
         shoot();
     }
 
-    camera.position.y += yVelocity;
+    yawObject.position.y += yVelocity;
     yVelocity -= gravity;
-    if (camera.position.y <= 1.7) {
-        camera.position.y = 1.7;
+    if (yawObject.position.y <= 1.7) {
+        yawObject.position.y = 1.7;
         yVelocity = 0;
         isGrounded = true;
     }
 
-    const dir = new THREE.Vector3();
-    if (keys['w']) dir.z -= 1;
-    if (keys['s']) dir.z += 1;
-    if (keys['a']) dir.x -= 1;
-    if (keys['d']) dir.x += 1;
-    dir.normalize().applyQuaternion(camera.quaternion);
-    dir.y = 0;
-    camera.position.addScaledVector(dir, moveSpeed);
+    // WASD 平面移動 (根據 yawObject 的水平朝向)
+    const moveDir = new THREE.Vector3();
+    if (keys['w']) moveDir.z -= 1;
+    if (keys['s']) moveDir.z += 1;
+    if (keys['a']) moveDir.x -= 1;
+    if (keys['d']) moveDir.x += 1;
+    moveDir.normalize().applyQuaternion(yawObject.quaternion);
+    moveDir.y = 0;
+    yawObject.position.addScaledVector(moveDir, moveSpeed);
 
     const borderLimit = MAP_SIZE - 1.5;
-    camera.position.x = Math.max(-borderLimit, Math.min(borderLimit, camera.position.x));
-    camera.position.z = Math.max(-borderLimit, Math.min(borderLimit, camera.position.z));
+    yawObject.position.x = Math.max(-borderLimit, Math.min(borderLimit, yawObject.position.x));
+    yawObject.position.z = Math.max(-borderLimit, Math.min(borderLimit, yawObject.position.z));
+
+    const playerWorldPos = yawObject.position.clone();
 
     for (let i = medkits.length - 1; i >= 0; i--) {
         let m = medkits[i];
         m.mesh.rotation.y += 0.02;
         m.mesh.position.y = 0.2 + Math.sin(Date.now() * 0.003) * 0.1;
 
-        if (camera.position.distanceTo(m.mesh.position) < 2.5) {
+        if (playerWorldPos.distanceTo(m.mesh.position) < 2.5) {
             hp = Math.min(maxHp, hp + m.healAmount);
             showMsg(`💚 拾取醫藥包，回復了 ${m.healAmount} 點血量！`);
             updateUI();
@@ -817,7 +850,7 @@ function animate() {
         eb.mesh.position.addScaledVector(eb.dir, eb.speed);
         eb.life--;
 
-        if (eb.mesh.position.distanceTo(camera.position) < 1.2) {
+        if (eb.mesh.position.distanceTo(playerWorldPos) < 1.2) {
             hp -= eb.damage;
             updateUI();
 
@@ -851,10 +884,10 @@ function animate() {
     for (let i = zombies.length - 1; i >= 0; i--) {
         let z = zombies[i];
         
-        let forward = new THREE.Vector3().subVectors(camera.position, z.mesh.position);
+        let forward = new THREE.Vector3().subVectors(playerWorldPos, z.mesh.position);
         
         let horizontalDist = Math.sqrt(forward.x * forward.x + forward.z * forward.z);
-        let playerFootY = camera.position.y - 1.7;
+        let playerFootY = playerWorldPos.y - 1.7;
         let isPlayerAboveEnemy = playerFootY > (z.height - 0.2);
 
         forward.y = 0;
@@ -874,15 +907,15 @@ function animate() {
         let attackRange = 1.8 * z.scale;
 
         if (horizontalDist > attackRange) {
-            let moveDir = new THREE.Vector3()
+            let moveDirZ = new THREE.Vector3()
                 .addScaledVector(forward, 0.85)
                 .addScaledVector(sideDir, 0.3)
                 .normalize();
 
-            z.mesh.position.addScaledVector(moveDir, z.speed);
+            z.mesh.position.addScaledVector(moveDirZ, z.speed);
         }
         
-        z.mesh.lookAt(camera.position.x, 0, camera.position.z);
+        z.mesh.lookAt(playerWorldPos.x, 0, playerWorldPos.z);
 
         if (horizontalDist <= attackRange + 0.3 && !isPlayerAboveEnemy) {
             let dmg = (z.isBoss ? 1.5 : 0.4) * (diffMult.hp * 0.8 + 0.2);
