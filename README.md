@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>屍境重構：廢墟決戰 v13.0</title>
+    <title>屍境重構：廢墟決戰 v18.0 (新數值平衡版)</title>
     <style>
         * { box-sizing: border-box; }
         html, body { width: 100%; height: 100%; margin: 0; padding: 0; overflow: hidden; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; user-select: none; background: #000; }
@@ -13,20 +13,10 @@
         #crosshair::after { content: ''; position: absolute; top: 4px; left: 4px; width: 2px; height: 2px; background: red; }
         
         #minimap-container {
-            position: absolute;
-            bottom: 12px;
-            left: 12px;
-            width: 160px;
-            height: 160px;
-            max-width: 28vw;
-            max-height: 28vw;
-            background: rgba(10, 15, 25, 0.85);
-            border: 2px solid #00ffff;
-            border-radius: 8px;
-            box-shadow: 0 0 15px rgba(0, 255, 255, 0.4);
-            pointer-events: none;
-            z-index: 10;
-            overflow: hidden;
+            position: absolute; bottom: 12px; left: 12px; width: 160px; height: 160px;
+            max-width: 28vw; max-height: 28vw; background: rgba(10, 15, 25, 0.85);
+            border: 2px solid #00ffff; border-radius: 8px; box-shadow: 0 0 15px rgba(0, 255, 255, 0.4);
+            pointer-events: none; z-index: 10; overflow: hidden;
         }
         #minimap { width: 100%; height: 100%; display: block; }
 
@@ -37,15 +27,24 @@
             z-index: 50; text-align: center;
         }
 
-        #shop { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(15, 15, 25, 0.95); color: white; padding: 20px; border-radius: 12px; display: none; text-align: center; border: 2px solid #ff4444; box-shadow: 0 0 20px rgba(255,68,68,0.4); z-index: 20; max-height: 85vh; width: 90%; max-width: 480px; overflow-y: auto; }
+        #shop { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(15, 15, 25, 0.95); color: white; padding: 20px; border-radius: 12px; display: none; text-align: center; border: 2px solid #ff4444; box-shadow: 0 0 20px rgba(255,68,68,0.4); z-index: 20; max-height: 85vh; width: 95%; max-width: 600px; overflow-y: auto; }
         
         #game-over-screen { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(20, 0, 0, 0.95); color: white; padding: 25px; border-radius: 15px; display: none; text-align: center; border: 3px solid #ff0000; box-shadow: 0 0 30px rgba(255,0,0,0.8); z-index: 30; width: 90%; max-width: 400px; }
         .stats-box { background: rgba(255,255,255,0.08); margin: 15px 0; padding: 15px; border-radius: 8px; text-align: left; line-height: 1.8; font-size: 15px; }
 
-        .btn { background: #222; color: white; border: 1px solid #ff4444; padding: 10px 16px; margin: 6px 0; cursor: pointer; font-size: 14px; border-radius: 6px; transition: 0.2s; width: 100%; }
+        .btn { background: #222; color: white; border: 1px solid #ff4444; padding: 8px 12px; margin: 4px 0; cursor: pointer; font-size: 14px; border-radius: 6px; transition: 0.2s; width: 100%; }
         .btn:hover { background: #ff4444; color: black; font-weight: bold; }
         .btn:disabled { background: #444; border-color: #666; color: #aaa; cursor: not-allowed; }
         
+        .weapon-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; background: rgba(255,255,255,0.05); padding: 8px 10px; border-radius: 6px; gap: 6px; }
+        .elem-btn { padding: 4px 6px; font-size: 11px; border-radius: 4px; cursor: pointer; white-space: nowrap; font-weight: bold; }
+        .elem-fire { border: 1px solid #ff4400; color: #ff6622; background: #2a0a00; }
+        .elem-fire:hover { background: #ff4400; color: #fff; }
+        .elem-bomb { border: 1px solid #ffaa00; color: #ffcc00; background: #2a1a00; }
+        .elem-bomb:hover { background: #ffaa00; color: #000; }
+        .elem-elec { border: 1px solid #00ffff; color: #00ffff; background: #002233; }
+        .elem-elec:hover { background: #00ffff; color: #000; }
+
         .diff-btn { font-size: 18px; padding: 15px 30px; width: 280px; margin: 10px; border-radius: 8px; font-weight: bold; }
         .diff-easy { border-color: #00ff66; color: #00ff66; }
         .diff-easy:hover { background: #00ff66; color: #000; }
@@ -90,23 +89,32 @@
     <div id="drop-msg">🎁 獲得幸運升級！</div>
 
     <div id="shop">
-        <h2 style="font-size: 20px; margin-top:0;">🛒 軍火庫與技能升級 (按 E 關閉)</h2>
+        <h2 style="font-size: 20px; margin-top:0;">🛒 軍火庫與屬性升級 (按 E 關閉)</h2>
         <div id="weapon-shop" style="margin-bottom: 10px; border-bottom: 1px solid #555; padding-bottom: 10px;">
-            <h3>解鎖新武器</h3>
-            <button class="btn" id="buy-w2" onclick="buyWeapon(2)">購買 戰術散彈槍 - 💰 150</button>
-            <button class="btn" id="buy-w3" onclick="buyWeapon(3)">購買 突擊步槍 - 💰 300</button>
-            <button class="btn" id="buy-w4" onclick="buyWeapon(4)">購買 戰術衝鋒槍 - 💰 600</button>
-            <button class="btn" id="buy-w5" onclick="buyWeapon(5)">購買 離子電漿毀滅者 - 💰 1200</button>
-            <button class="btn" id="buy-w6" onclick="buyWeapon(6)">購買 快速離子電漿毀滅者 - 💰 2500</button>
+            <h3>武器購買與屬性升級 (火/炸彈/電)</h3>
+            
+            <script>
+                for(let i=1; i<=6; i++) {
+                    document.write(`
+                    <div class="weapon-row">
+                        <button class="btn" id="buy-w${i}" style="flex:2.2;" onclick="buyWeapon(${i})">載入中...</button>
+                        <button class="elem-btn elem-fire" onclick="upgradeElement(${i}, 'fire')">🔥火 Lv.<span id="lv-fire-${i}">0</span><br>(💰<span id="c-fire-${i}">500</span>)</button>
+                        <button class="elem-btn elem-bomb" onclick="upgradeElement(${i}, 'bomb')">💥炸 Lv.<span id="lv-bomb-${i}">0</span><br>(💰<span id="c-bomb-${i}">500</span>)</button>
+                        <button class="elem-btn elem-elec" onclick="upgradeElement(${i}, 'elec')">⚡電 Lv.<span id="lv-elec-${i}">0</span><br>(💰<span id="c-elec-${i}">500</span>)</button>
+                    </div>
+                    `);
+                }
+            </script>
         </div>
+
         <div>
-            <h3>能力強化 (費用遞增 50%)</h3>
+            <h3>基礎能力強化</h3>
             <button class="btn" id="btn-up-hp" onclick="buyUpgrade('hp')">提升血量上限 (+25 HP) - 💰 <span id="cost-hp">50</span></button>
             <button class="btn" id="btn-up-dmg" onclick="buyUpgrade('dmg')">提升整體傷害 (+20%) - 💰 <span id="cost-dmg">75</span></button>
             <button class="btn" id="btn-up-speed" onclick="buyUpgrade('speed')">戰術機動加速 (+15%) - 💰 <span id="cost-speed">60</span></button>
             <button class="btn" id="btn-up-firerate" onclick="buyUpgrade('firerate')">⚡ 射速提升 (+15%) - 💰 <span id="cost-firerate">80</span></button>
-            <button class="btn" id="btn-up-ammo" onclick="buyUpgrade('ammo')">📦 彈藥上限擴充 (+25% 指數成長) - 💰 <span id="cost-ammo">70</span></button>
-            <button class="btn" id="btn-up-autoReload" onclick="buyUpgrade('autoReload')">🤖 自動補彈系統 (每5秒自動補滿全彈藥) - 💰 3000</button>
+            <button class="btn" id="btn-up-ammo" onclick="buyUpgrade('ammo')">📦 彈藥上限擴充 (+25%) - 💰 <span id="cost-ammo">70</span></button>
+            <button class="btn" id="btn-up-autoReload" onclick="buyUpgrade('autoReload')">🤖 自動補彈系統 - 💰 3000</button>
         </div>
         <br>
         <button class="btn" onclick="toggleShop()" style="background: #444;">返回戰場</button>
@@ -153,12 +161,12 @@ let totalKills = 0, totalGoldEarned = 0;
 const upgradeCosts = { hp: 50, dmg: 75, speed: 60, firerate: 80, ammo: 70 };
 
 const weapons = {
-    1: { name: "戰術手槍", maxAmmo: 12, ammo: 12, dmg: 35, baseFireRate: 250, fireRate: 250, auto: false, unlocked: true, price: 0, bulletColor: 0xffff00 },
-    2: { name: "戰術散彈槍", maxAmmo: 6, ammo: 6, dmg: 25, count: 6, baseFireRate: 750, fireRate: 750, auto: false, unlocked: false, price: 150, bulletColor: 0xffa500 },
-    3: { name: "突擊步槍", maxAmmo: 30, ammo: 30, dmg: 40, baseFireRate: 110, fireRate: 110, auto: true, unlocked: false, price: 300, bulletColor: 0xff4500 },
-    4: { name: "戰術衝鋒槍", maxAmmo: 45, ammo: 45, dmg: 22, baseFireRate: 60, fireRate: 60, auto: true, unlocked: false, price: 600, bulletColor: 0xffff00 },
-    5: { name: "離子電漿毀滅者", maxAmmo: 25, ammo: 25, dmg: 100, count: 2, baseFireRate: 140, fireRate: 140, auto: true, unlocked: false, price: 1200, bulletColor: 0x00ffff },
-    6: { name: "快速離子電漿毀滅者", maxAmmo: 40, ammo: 40, dmg: 110, count: 2, baseFireRate: 93, fireRate: 93, auto: true, unlocked: false, price: 2500, bulletColor: 0x00ffaa }
+    1: { name: "戰術手槍", maxAmmo: 12, ammo: 12, dmg: 35, baseFireRate: 250, fireRate: 250, auto: false, unlocked: true, price: 0, bulletColor: 0xffff00, elem: { fire: { lv: 0, cost: 500 }, bomb: { lv: 0, cost: 500 }, elec: { lv: 0, cost: 500 } } },
+    2: { name: "戰術散彈槍", maxAmmo: 6, ammo: 6, dmg: 25, count: 6, baseFireRate: 750, fireRate: 750, auto: false, unlocked: false, price: 150, bulletColor: 0xffa500, elem: { fire: { lv: 0, cost: 500 }, bomb: { lv: 0, cost: 500 }, elec: { lv: 0, cost: 500 } } },
+    3: { name: "突擊步槍", maxAmmo: 30, ammo: 30, dmg: 40, baseFireRate: 110, fireRate: 110, auto: true, unlocked: false, price: 300, bulletColor: 0xff4500, elem: { fire: { lv: 0, cost: 500 }, bomb: { lv: 0, cost: 500 }, elec: { lv: 0, cost: 500 } } },
+    4: { name: "戰術衝鋒槍", maxAmmo: 45, ammo: 45, dmg: 22, baseFireRate: 60, fireRate: 60, auto: true, unlocked: false, price: 600, bulletColor: 0xffff00, elem: { fire: { lv: 0, cost: 500 }, bomb: { lv: 0, cost: 500 }, elec: { lv: 0, cost: 500 } } },
+    5: { name: "離子電漿毀滅者", maxAmmo: 25, ammo: 25, dmg: 100, count: 2, baseFireRate: 140, fireRate: 140, auto: true, unlocked: false, price: 1200, bulletColor: 0x00ffff, elem: { fire: { lv: 0, cost: 500 }, bomb: { lv: 0, cost: 500 }, elec: { lv: 0, cost: 500 } } },
+    6: { name: "快速離子電漿毀滅者", maxAmmo: 40, ammo: 40, dmg: 110, count: 2, baseFireRate: 93, fireRate: 93, auto: true, unlocked: false, price: 2500, bulletColor: 0x00ffaa, elem: { fire: { lv: 0, cost: 500 }, bomb: { lv: 0, cost: 500 }, elec: { lv: 0, cost: 500 } } }
 };
 let currentWeaponKey = 1;
 
@@ -230,7 +238,6 @@ function init() {
         if (!isPaused && !isGameOver) document.body.requestPointerLock();
     });
     
-    // 恢復為原本僅水平左右旋轉
     document.addEventListener('mousemove', (e) => {
         if (document.pointerLockElement === document.body && !isPaused && !isGameOver) {
             camera.rotation.y -= e.movementX * 0.0022;
@@ -327,10 +334,10 @@ function spawnMedkit() {
     medkits.push({ mesh, healAmount: 20 });
 }
 
-function createZombieMesh(color, scale, eyeColor = 0x00ffcc) {
+function createZombieMesh(color, scale, eyeColor = 0x00ffcc, transparent = false, opacity = 1.0) {
     const group = new THREE.Group();
-    const bodyMat = new THREE.MeshStandardMaterial({ color: color, roughness: 0.5 });
-    const eyeMat = new THREE.MeshBasicMaterial({ color: eyeColor });
+    const bodyMat = new THREE.MeshStandardMaterial({ color: color, roughness: 0.5, transparent: transparent, opacity: opacity });
+    const eyeMat = new THREE.MeshBasicMaterial({ color: eyeColor, transparent: transparent, opacity: opacity });
 
     const torso = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.9, 0.4), bodyMat);
     torso.position.y = 0.9;
@@ -368,37 +375,54 @@ function spawnZombie(forceBoss = false) {
     let baseHp = 60;
     let scale = 1.0;
     let isBoss = false;
+    let isExploder = false;
+    let isRanged = false;
+    let transparent = false;
+    let opacity = 1.0;
 
-    // 🧬 隨波數持續成長與進化機制
     let waveScalingHp = 1 + (wave - 1) * 0.08;
-    let evoChance = Math.min(0.8, (wave - 1) * 0.08); // 隨波數提升進化機率
+    let evoChance = Math.min(0.8, (wave - 1) * 0.08);
 
     if (forceBoss || (wave % 5 === 0 && Math.random() < 0.2)) {
-        color = 0x800080; eyeColor = 0xff0055; baseSpeed = 0.022; baseHp = 600; scale = 2.4; isBoss = true;
+        color = 0x800080; eyeColor = 0xff0055; baseSpeed = 0.022; baseHp = 600; scale = 2.4; isBoss = true; isRanged = true;
     } else if (Math.random() < evoChance) {
-        // 殭屍進化能力庫
         let evos = ['speed', 'tank', 'toxic'];
         if (wave >= 8) evos.push('void');
+        if (wave >= 9) evos.push('exploder');
+        if (wave >= 11) evos.push('ghost');
+        if (wave >= 13) evos.push('titan');
+        if (wave >= 14) evos.push('plasma');
+        if (wave >= 17) evos.push('plague');
+
         let chosenEvo = evos[Math.floor(Math.random() * evos.length)];
 
-        if (chosenEvo === 'speed') { // 疾速狂暴
+        if (chosenEvo === 'speed') {
             color = 0xffaa00; eyeColor = 0xffff00; baseSpeed = 0.11 + (wave * 0.003); baseHp = 45; scale = 0.95;
-        } else if (chosenEvo === 'tank') { // 鋼鐵裝甲
+        } else if (chosenEvo === 'tank') {
             color = 0x334455; eyeColor = 0x00ffff; baseSpeed = 0.03; baseHp = 180; scale = 1.5;
-        } else if (chosenEvo === 'toxic') { // 毒素自爆型
+        } else if (chosenEvo === 'toxic') {
             color = 0x00ff55; eyeColor = 0xff00ff; baseSpeed = 0.07; baseHp = 70; scale = 1.1;
-        } else if (chosenEvo === 'void') { // 虛空狂暴
+        } else if (chosenEvo === 'void') {
             color = 0x8800ff; eyeColor = 0xffffff; baseSpeed = 0.10; baseHp = 250; scale = 1.3;
+        } else if (chosenEvo === 'exploder') {
+            color = 0xff3300; eyeColor = 0xffff00; baseSpeed = 0.09; baseHp = 80; scale = 1.05; isExploder = true;
+        } else if (chosenEvo === 'ghost') {
+            color = 0xaaaaaa; eyeColor = 0x00ffff; baseSpeed = 0.12; baseHp = 110; scale = 0.9; transparent = true; opacity = 0.35;
+        } else if (chosenEvo === 'titan') {
+            color = 0x111122; eyeColor = 0xff0000; baseSpeed = 0.02; baseHp = 500; scale = 2.0;
+        } else if (chosenEvo === 'plasma') {
+            color = 0x00e5ff; eyeColor = 0xffffff; baseSpeed = 0.13; baseHp = 160; scale = 1.1;
+        } else if (chosenEvo === 'plague') {
+            color = 0x4a0e4e; eyeColor = 0x00ff00; baseSpeed = 0.04; baseHp = 450; scale = 1.8; isRanged = true;
         }
     } else {
-        // 一般型殭屍隨波數輕微加速
         baseSpeed += Math.min(0.04, wave * 0.001);
     }
 
     let speed = baseSpeed * diffMult.speed;
     let zHp = baseHp * diffMult.hp * waveScalingHp;
 
-    const mesh = createZombieMesh(color, scale, eyeColor);
+    const mesh = createZombieMesh(color, scale, eyeColor, transparent, opacity);
     const angle = Math.random() * Math.PI * 2;
     const dist = 15 + Math.random() * (MAP_SIZE - 20);
     mesh.position.set(
@@ -412,25 +436,27 @@ function spawnZombie(forceBoss = false) {
     scene.add(mesh);
     
     zombies.push({ 
-        mesh, hp: zHp, maxHp: zHp, speed, scale, color, isBoss,
+        mesh, hp: zHp, maxHp: zHp, speed, scale, color, isBoss, isExploder, isRanged,
         height: 1.8 * scale,
         strafeDir: (Math.random() < 0.5 ? 1 : -1),
         strafeTimer: Math.floor(Math.random() * 60),
-        lastShootTime: Date.now()
+        lastShootTime: Date.now(),
+        burnTimer: 0,
+        burnDmg: 0
     });
 }
 
-function bossShoot(boss) {
-    const startPos = boss.mesh.position.clone().add(new THREE.Vector3(0, 1.5 * boss.scale, 0));
+function zombieShoot(zombie) {
+    const startPos = zombie.mesh.position.clone().add(new THREE.Vector3(0, 1.2 * zombie.scale, 0));
     const targetPos = camera.position.clone();
     const dir = new THREE.Vector3().subVectors(targetPos, startPos).normalize();
 
-    const geo = new THREE.SphereGeometry(0.3);
-    const mat = new THREE.MeshBasicMaterial({ color: 0xff0055 });
+    const geo = new THREE.SphereGeometry(zombie.isBoss ? 0.3 : 0.2);
+    const mat = new THREE.MeshBasicMaterial({ color: zombie.isBoss ? 0xff0055 : 0x00ff00 });
     const bullet = new THREE.Mesh(geo, mat);
     bullet.position.copy(startPos);
 
-    enemyBullets.push({ mesh: bullet, dir, speed: 0.35, life: 120, damage: 20 * diffMult.hp });
+    enemyBullets.push({ mesh: bullet, dir, speed: zombie.isBoss ? 0.35 : 0.28, life: 120, damage: (zombie.isBoss ? 20 : 12) * diffMult.hp });
     scene.add(bullet);
 }
 
@@ -453,25 +479,24 @@ function startNextWaveCountdown() {
     }, 1000);
 }
 
+// 👾 修改怪物數量計算公式：前一波數量 * 1.17 + 3
 function spawnWave() {
-    if (wave === 1) {
-        totalZombiesInWave = diffMult.initialZombies;
-    } else {
-        totalZombiesInWave = Math.floor(totalZombiesInWave * 1.3 + 3);
+    let count = diffMult.initialZombies;
+    for (let i = 1; i < wave; i++) {
+        count = Math.floor(count * 1.17 + 3);
     }
-    
+    totalZombiesInWave = count;
     killedZombiesInWave = 0;
     updateUI();
 
     let spawned = 0;
-    
     if (wave % 5 === 0) {
         spawnZombie(true);
         spawned++;
     }
 
     let maxTotalSpawnTime = 20000;
-    let baseInterval = Math.max(150, 700 - (wave * 35));
+    let baseInterval = Math.max(120, 700 - (wave * 30));
     let requiredInterval = maxTotalSpawnTime / totalZombiesInWave;
     let spawnInterval = Math.min(baseInterval, requiredInterval);
 
@@ -512,14 +537,30 @@ function shoot() {
     w.ammo--;
     updateUI();
 
+    let bColor = w.bulletColor;
+    if (w.elem.elec.lv > 0) bColor = 0x00ffff;
+    else if (w.elem.bomb.lv > 0) bColor = 0xffaa00;
+    else if (w.elem.fire.lv > 0) bColor = 0xff3300;
+
     const createBullet = (dirOffset = new THREE.Vector3()) => {
         const geo = new THREE.SphereGeometry((currentWeaponKey === 5 || currentWeaponKey === 6) ? 0.2 : 0.08);
-        const mat = new THREE.MeshBasicMaterial({ color: w.bulletColor });
+        const mat = new THREE.MeshBasicMaterial({ color: bColor });
         const bullet = new THREE.Mesh(geo, mat);
         bullet.position.copy(camera.position).add(new THREE.Vector3(0, -0.2, 0));
 
         const dir = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion).add(dirOffset).normalize();
-        bullets.push({ mesh: bullet, dir: dir, damage: w.dmg * damageMult, life: 60, color: w.bulletColor });
+        bullets.push({ 
+            mesh: bullet, 
+            dir: dir, 
+            damage: w.dmg * damageMult, 
+            life: 60, 
+            color: bColor, 
+            elem: {
+                fireLv: w.elem.fire.lv,
+                bombLv: w.elem.bomb.lv,
+                elecLv: w.elem.elec.lv
+            }
+        });
         scene.add(bullet);
     };
 
@@ -534,7 +575,6 @@ function shoot() {
 }
 
 function triggerLuckyDrop() {
-    // 🎁 1% 掉落幸運升級庫
     const drops = ['hp', 'dmg', 'speed', 'firerate', 'ammo', 'gold'];
     const type = drops[Math.floor(Math.random() * drops.length)];
     let text = "";
@@ -629,6 +669,30 @@ function buyWeapon(key) {
     }
 }
 
+// 💰 金幣升級倍率改為 *1.45
+function upgradeElement(key, type) {
+    const w = weapons[key];
+    if (!w.unlocked) {
+        alert("請先購買解鎖該武器！");
+        return;
+    }
+
+    const elemData = w.elem[type];
+    if (gold >= elemData.cost) {
+        gold -= elemData.cost;
+        elemData.lv++;
+        elemData.cost = Math.floor(elemData.cost * 1.45);
+
+        let typeName = type === 'fire' ? '🔥 燃燒' : (type === 'bomb' ? '💥 爆炸' : '⚡ 電擊');
+        showMsg(`⚡ ${w.name} 的 ${typeName} 屬性升級至 Lv.${elemData.lv}！`);
+        updateUI();
+        updateShopUI();
+    } else {
+        alert("金幣不足以升級該屬性！");
+    }
+}
+
+// 💰 基礎強化費用倍率同步調整為 *1.45
 function buyUpgrade(type) {
     if (type === 'autoReload') {
         if (!hasAutoReload && gold >= 3000) {
@@ -664,7 +728,7 @@ function buyUpgrade(type) {
                 weapons[k].ammo = weapons[k].maxAmmo;
             }
         }
-        upgradeCosts[type] = Math.floor(cost * 1.5);
+        upgradeCosts[type] = Math.floor(cost * 1.45);
         updateUI();
         updateShopUI();
     } else {
@@ -680,10 +744,20 @@ function updateShopUI() {
                 btn.innerText = `已擁有 ${weapons[k].name}`;
                 btn.disabled = true;
             } else {
+                btn.innerText = `購買 ${weapons[k].name} - 💰 ${weapons[k].price}`;
                 btn.disabled = gold < weapons[k].price;
             }
         }
+
+        ['fire', 'bomb', 'elec'].forEach(type => {
+            const elemData = weapons[k].elem[type];
+            const lvSpan = document.getElementById(`lv-${type}-${k}`);
+            const costSpan = document.getElementById(`c-${type}-${k}`);
+            if(lvSpan) lvSpan.innerText = elemData.lv;
+            if(costSpan) costSpan.innerText = elemData.cost;
+        });
     }
+
     document.getElementById('cost-hp').innerText = upgradeCosts.hp;
     document.getElementById('cost-dmg').innerText = upgradeCosts.dmg;
     document.getElementById('cost-speed').innerText = upgradeCosts.speed;
@@ -708,7 +782,13 @@ function updateUI() {
     document.getElementById('zombie-count').innerText = Math.max(0, remainingZombies);
 
     const w = weapons[currentWeaponKey];
-    document.getElementById('weapon').innerText = w.name;
+    let elemTags = [];
+    if(w.elem.fire.lv > 0) elemTags.push(`🔥Lv.${w.elem.fire.lv}`);
+    if(w.elem.bomb.lv > 0) elemTags.push(`💥Lv.${w.elem.bomb.lv}`);
+    if(w.elem.elec.lv > 0) elemTags.push(`⚡Lv.${w.elem.elec.lv}`);
+
+    let str = elemTags.length > 0 ? ` [${elemTags.join(' ')}]` : '';
+    document.getElementById('weapon').innerText = w.name + str;
     document.getElementById('ammo').innerText = `${w.ammo}/${w.maxAmmo}`;
 }
 
@@ -781,6 +861,37 @@ function gameOver() {
     document.getElementById('game-over-screen').style.display = 'block';
 }
 
+function triggerElementEffect(hitZombie, bullet) {
+    if (bullet.elem.elecLv > 0) {
+        let maxTargets = 2 + bullet.elem.elecLv;
+        let chainDmg = bullet.damage * (0.4 + bullet.elem.elecLv * 0.15);
+        let count = 0;
+        zombies.forEach(z => {
+            if (z !== hitZombie && count < maxTargets && z.mesh.position.distanceTo(hitZombie.mesh.position) < (5.0 + bullet.elem.elecLv)) {
+                z.hp -= chainDmg;
+                createHitParticles(z.mesh.position, 0x00ffff);
+                count++;
+            }
+        });
+    }
+
+    if (bullet.elem.bombLv > 0) {
+        let radius = 3.0 + (bullet.elem.bombLv * 0.8);
+        let bombDmg = bullet.damage * (0.3 + bullet.elem.bombLv * 0.2);
+        createHitParticles(bullet.mesh.position, 0xffaa00);
+        zombies.forEach(z => {
+            if (z.mesh.position.distanceTo(bullet.mesh.position) < radius) {
+                z.hp -= bombDmg;
+            }
+        });
+    }
+
+    if (bullet.elem.fireLv > 0) {
+        hitZombie.burnTimer = 3 + bullet.elem.fireLv;
+        hitZombie.burnDmg = bullet.damage * (0.1 + bullet.elem.fireLv * 0.08);
+    }
+}
+
 function animate() {
     requestAnimationFrame(animate);
     if (isPaused || isGameOver) return;
@@ -837,6 +948,7 @@ function animate() {
                 z.mesh.position.addScaledVector(b.dir, 0.15);
                 
                 createHitParticles(b.mesh.position, b.color);
+                triggerElementEffect(z, b);
                 
                 z.mesh.children.forEach(child => {
                     if (child.material) child.material.color.setHex(0xffffff);
@@ -853,6 +965,14 @@ function animate() {
                 bullets.splice(i, 1);
 
                 if (z.hp <= 0) {
+                    if (z.isExploder) {
+                        createHitParticles(z.mesh.position, 0xff3300);
+                        if (camera.position.distanceTo(z.mesh.position) < 4.0) {
+                            hp -= 35 * diffMult.hp;
+                            showMsg("💥 遭受自爆範圍傷害！");
+                        }
+                    }
+
                     scene.remove(z.mesh);
                     zombies.splice(j, 1);
                     killedZombiesInWave++;
@@ -862,7 +982,6 @@ function animate() {
                     gold += earned;
                     totalGoldEarned += earned;
 
-                    // 🎲 1% 幾率掉落幸運升級
                     if (Math.random() < 0.01) {
                         triggerLuckyDrop();
                     }
@@ -917,9 +1036,26 @@ function animate() {
 
     for (let i = zombies.length - 1; i >= 0; i--) {
         let z = zombies[i];
+
+        if (z.burnTimer > 0) {
+            z.burnTimer -= 0.05;
+            z.hp -= z.burnDmg * 0.05;
+            if (Math.random() < 0.3) createHitParticles(z.mesh.position, 0xff3300);
+            
+            if (z.hp <= 0) {
+                scene.remove(z.mesh);
+                zombies.splice(i, 1);
+                killedZombiesInWave++;
+                totalKills++;
+                let earned = z.isBoss ? 250 : 25 + wave * 2;
+                gold += earned;
+                totalGoldEarned += earned;
+                updateUI();
+                continue;
+            }
+        }
         
         let forward = new THREE.Vector3().subVectors(camera.position, z.mesh.position);
-        
         let horizontalDist = Math.sqrt(forward.x * forward.x + forward.z * forward.z);
         let playerFootY = camera.position.y - 1.7;
         let isPlayerAboveEnemy = playerFootY > (z.height - 0.2);
@@ -927,9 +1063,9 @@ function animate() {
         forward.y = 0;
         forward.normalize();
 
-        if (z.isBoss && Date.now() - z.lastShootTime > 2500) {
+        if (z.isRanged && Date.now() - z.lastShootTime > (z.isBoss ? 2500 : 3500)) {
             z.lastShootTime = Date.now();
-            bossShoot(z);
+            zombieShoot(z);
         }
 
         z.strafeTimer--;
@@ -972,7 +1108,6 @@ function animate() {
     }
 
     drawMinimap();
-
     renderer.render(scene, camera);
 }
 
