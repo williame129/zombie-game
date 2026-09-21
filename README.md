@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>屍境重構：廢墟決戰 v18.0 (新數值平衡版)</title>
+    <title>屍境重構：廢墟決戰 v20.0 (難度傷害調整版)</title>
     <style>
         * { box-sizing: border-box; }
         html, body { width: 100%; height: 100%; margin: 0; padding: 0; overflow: hidden; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; user-select: none; background: #000; }
@@ -45,7 +45,7 @@
         .elem-elec { border: 1px solid #00ffff; color: #00ffff; background: #002233; }
         .elem-elec:hover { background: #00ffff; color: #000; }
 
-        .diff-btn { font-size: 18px; padding: 15px 30px; width: 280px; margin: 10px; border-radius: 8px; font-weight: bold; }
+        .diff-btn { font-size: 18px; padding: 15px 30px; width: 320px; margin: 10px; border-radius: 8px; font-weight: bold; }
         .diff-easy { border-color: #00ff66; color: #00ff66; }
         .diff-easy:hover { background: #00ff66; color: #000; }
         .diff-medium { border-color: #ffaa00; color: #ffaa00; }
@@ -64,9 +64,9 @@
     <div id="difficulty-screen">
         <h1 style="font-size: 36px; margin-bottom: 10px; text-shadow: 0 0 10px #ff0000;">☣️ 屍境重構：廢墟決戰</h1>
         <p style="color: #aaa; margin-bottom: 30px;">請選擇遊戲難度以開始作戰</p>
-        <button class="btn diff-btn diff-easy" onclick="selectDifficulty('easy')">🟢 簡單 (Easy)<br><span style="font-size:12px; font-weight:normal;">首波10隻 | 速度 100% | 血量 100%</span></button>
-        <button class="btn diff-btn diff-medium" onclick="selectDifficulty('medium')">🟡 中等 (Medium)<br><span style="font-size:12px; font-weight:normal;">首波20隻 | 速度 110% | 血量 150%</span></button>
-        <button class="btn diff-btn diff-hard" onclick="selectDifficulty('hard')">🔴 困難 (Hard)<br><span style="font-size:12px; font-weight:normal;">首波30隻 | 速度 120% | 血量 225%</span></button>
+        <button class="btn diff-btn diff-easy" onclick="selectDifficulty('easy')">🟢 簡單 (Easy)<br><span style="font-size:12px; font-weight:normal;">Boss傷害:10 | 小怪傷害:0.5/0.1s | 💰2倍</span></button>
+        <button class="btn diff-btn diff-medium" onclick="selectDifficulty('medium')">🟡 中等 (Medium)<br><span style="font-size:12px; font-weight:normal;">Boss傷害:20 | 小怪傷害:1.0/0.1s | 💰1.4倍</span></button>
+        <button class="btn diff-btn diff-hard" onclick="selectDifficulty('hard')">🔴 困難 (Hard)<br><span style="font-size:12px; font-weight:normal;">Boss傷害:30 | 小怪傷害:1.5/0.1s | 💰0.9倍</span></button>
     </div>
 
     <div id="damage-flash"></div>
@@ -138,7 +138,8 @@ let moveSpeed = 0.18, damageMult = 1.0;
 let fireRateMult = 1.0;
 
 let difficulty = 'easy';
-let diffMult = { hp: 1.0, speed: 1.0, initialZombies: 10, label: "🟢 簡單", color: "#00ff66" };
+// ⚙️ 設定各難度的 Boss 傷害與小怪傷害 (以 0.1 秒算一次)
+let diffMult = { hp: 1.0, speed: 1.0, initialZombies: 10, goldMult: 2.0, bossDmg: 10, normalDmg: 0.5, label: "🟢 簡單", color: "#00ff66" };
 
 let yVelocity = 0;
 const gravity = 0.015;
@@ -170,14 +171,15 @@ const weapons = {
 };
 let currentWeaponKey = 1;
 
+// 🎯 選擇難度並載入對應傷害參數
 function selectDifficulty(diff) {
     difficulty = diff;
     if (diff === 'easy') {
-        diffMult = { hp: 1.0, speed: 1.0, initialZombies: 10, label: "🟢 簡單", color: "#00ff66" };
+        diffMult = { hp: 1.0, speed: 1.0, initialZombies: 10, goldMult: 2.0, bossDmg: 10, normalDmg: 0.5, label: "🟢 簡單", color: "#00ff66" };
     } else if (diff === 'medium') {
-        diffMult = { hp: 1.5, speed: 1.1, initialZombies: 20, label: "🟡 中等", color: "#ffaa00" };
+        diffMult = { hp: 1.5, speed: 1.1, initialZombies: 20, goldMult: 1.4, bossDmg: 20, normalDmg: 1.0, label: "🟡 中等", color: "#ffaa00" };
     } else if (diff === 'hard') {
-        diffMult = { hp: 2.25, speed: 1.2, initialZombies: 30, label: "🔴 困難", color: "#ff3333" };
+        diffMult = { hp: 2.25, speed: 1.2, initialZombies: 30, goldMult: 0.9, bossDmg: 30, normalDmg: 1.5, label: "🔴 困難", color: "#ff3333" };
     }
 
     const tag = document.getElementById('difficulty-tag');
@@ -456,7 +458,8 @@ function zombieShoot(zombie) {
     const bullet = new THREE.Mesh(geo, mat);
     bullet.position.copy(startPos);
 
-    enemyBullets.push({ mesh: bullet, dir, speed: zombie.isBoss ? 0.35 : 0.28, life: 120, damage: (zombie.isBoss ? 20 : 12) * diffMult.hp });
+    // 🎯 遠程子彈傷害套用 Boss 傷害設定
+    enemyBullets.push({ mesh: bullet, dir, speed: zombie.isBoss ? 0.35 : 0.28, life: 120, damage: zombie.isBoss ? diffMult.bossDmg : (diffMult.bossDmg * 0.5) });
     scene.add(bullet);
 }
 
@@ -479,7 +482,6 @@ function startNextWaveCountdown() {
     }, 1000);
 }
 
-// 👾 修改怪物數量計算公式：前一波數量 * 1.17 + 3
 function spawnWave() {
     let count = diffMult.initialZombies;
     for (let i = 1; i < wave; i++) {
@@ -599,7 +601,7 @@ function triggerLuckyDrop() {
         }
         text = "🎁 幸運掉落：全武器彈藥容量 +5！";
     } else if (type === 'gold') {
-        let bonusGold = 200 + wave * 50;
+        let bonusGold = Math.floor((200 + wave * 50) * diffMult.goldMult);
         gold += bonusGold;
         totalGoldEarned += bonusGold;
         text = `🎁 幸運掉落：獲得額外金幣 💰 ${bonusGold}！`;
@@ -669,7 +671,6 @@ function buyWeapon(key) {
     }
 }
 
-// 💰 金幣升級倍率改為 *1.45
 function upgradeElement(key, type) {
     const w = weapons[key];
     if (!w.unlocked) {
@@ -692,7 +693,6 @@ function upgradeElement(key, type) {
     }
 }
 
-// 💰 基礎強化費用倍率同步調整為 *1.45
 function buyUpgrade(type) {
     if (type === 'autoReload') {
         if (!hasAutoReload && gold >= 3000) {
@@ -892,6 +892,31 @@ function triggerElementEffect(hitZombie, bullet) {
     }
 }
 
+function handleZombieDeath(z) {
+    if (z.isExploder) {
+        createHitParticles(z.mesh.position, 0xff3300);
+        if (camera.position.distanceTo(z.mesh.position) < 4.0) {
+            hp -= diffMult.normalDmg * 20; // 自爆為相當於2秒的小怪傷害
+            showMsg("💥 遭受自爆範圍傷害！");
+        }
+    }
+
+    scene.remove(z.mesh);
+    killedZombiesInWave++;
+    totalKills++;
+    
+    let baseEarned = z.isBoss ? 250 : (25 + wave * 2);
+    let earned = Math.floor(baseEarned * diffMult.goldMult);
+    gold += earned;
+    totalGoldEarned += earned;
+
+    if (Math.random() < 0.01) {
+        triggerLuckyDrop();
+    }
+
+    updateUI();
+}
+
 function animate() {
     requestAnimationFrame(animate);
     if (isPaused || isGameOver) return;
@@ -965,28 +990,8 @@ function animate() {
                 bullets.splice(i, 1);
 
                 if (z.hp <= 0) {
-                    if (z.isExploder) {
-                        createHitParticles(z.mesh.position, 0xff3300);
-                        if (camera.position.distanceTo(z.mesh.position) < 4.0) {
-                            hp -= 35 * diffMult.hp;
-                            showMsg("💥 遭受自爆範圍傷害！");
-                        }
-                    }
-
-                    scene.remove(z.mesh);
+                    handleZombieDeath(z);
                     zombies.splice(j, 1);
-                    killedZombiesInWave++;
-                    totalKills++;
-                    
-                    let earned = z.isBoss ? 250 : 25 + wave * 2;
-                    gold += earned;
-                    totalGoldEarned += earned;
-
-                    if (Math.random() < 0.01) {
-                        triggerLuckyDrop();
-                    }
-
-                    updateUI();
                 }
                 break;
             }
@@ -1043,14 +1048,8 @@ function animate() {
             if (Math.random() < 0.3) createHitParticles(z.mesh.position, 0xff3300);
             
             if (z.hp <= 0) {
-                scene.remove(z.mesh);
+                handleZombieDeath(z);
                 zombies.splice(i, 1);
-                killedZombiesInWave++;
-                totalKills++;
-                let earned = z.isBoss ? 250 : 25 + wave * 2;
-                gold += earned;
-                totalGoldEarned += earned;
-                updateUI();
                 continue;
             }
         }
@@ -1087,14 +1086,15 @@ function animate() {
         
         z.mesh.lookAt(camera.position.x, 0, camera.position.z);
 
+        // ⚔️ 依據 Boss 或小怪扣除對應數量的傷害 (60fps下 每0.1秒約6幀)
         if (horizontalDist <= attackRange + 0.3 && !isPlayerAboveEnemy) {
-            let dmg = (z.isBoss ? 1.5 : 0.4) * (diffMult.hp * 0.8 + 0.2);
-            hp -= dmg;
+            let dmgPerFrame = z.isBoss ? (diffMult.bossDmg / 6) : (diffMult.normalDmg / 6);
+            hp -= dmgPerFrame;
             updateUI();
             
             const flash = document.getElementById('damage-flash');
             flash.style.display = 'block';
-            setTimeout(() => flash.style.display = 'none', 50);
+            setTimeout(() => flash.style.display = 'none', 30);
 
             if (hp <= 0) {
                 gameOver();
