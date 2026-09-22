@@ -3,12 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>屍境重構：廢墟決戰 v20.0 (難度傷害調整版)</title>
+    <title>屍境重構：廢墟決戰 v21.0 (畫質選單與傷害倍增版)</title>
     <style>
         * { box-sizing: border-box; }
         html, body { width: 100%; height: 100%; margin: 0; padding: 0; overflow: hidden; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; user-select: none; background: #000; }
         
         #ui { position: absolute; top: 12px; left: 12px; color: #fff; text-shadow: 2px 2px 4px #000; font-size: 16px; pointer-events: none; z-index: 10; max-width: 80vw; }
+        .pause-btn { pointer-events: auto; background: rgba(255, 255, 255, 0.2); border: 1px solid #fff; color: white; padding: 3px 8px; border-radius: 4px; cursor: pointer; font-size: 12px; margin-bottom: 5px; }
+        .pause-btn:hover { background: #00ffff; color: #000; }
+
         #crosshair { position: absolute; top: 50%; left: 50%; width: 14px; height: 14px; border: 2px solid rgba(255,255,255,0.8); border-radius: 50%; transform: translate(-50%, -50%); pointer-events: none; z-index: 10; }
         #crosshair::after { content: ''; position: absolute; top: 4px; left: 4px; width: 2px; height: 2px; background: red; }
         
@@ -27,6 +30,13 @@
             z-index: 50; text-align: center;
         }
 
+        #pause-menu {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            background: rgba(10, 10, 20, 0.95); color: white; padding: 25px; border-radius: 12px;
+            display: none; text-align: center; border: 2px solid #00ffff; box-shadow: 0 0 25px rgba(0,255,255,0.5);
+            z-index: 40; width: 90%; max-width: 400px;
+        }
+
         #shop { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(15, 15, 25, 0.95); color: white; padding: 20px; border-radius: 12px; display: none; text-align: center; border: 2px solid #ff4444; box-shadow: 0 0 20px rgba(255,68,68,0.4); z-index: 20; max-height: 85vh; width: 95%; max-width: 600px; overflow-y: auto; }
         
         #game-over-screen { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(20, 0, 0, 0.95); color: white; padding: 25px; border-radius: 15px; display: none; text-align: center; border: 3px solid #ff0000; box-shadow: 0 0 30px rgba(255,0,0,0.8); z-index: 30; width: 90%; max-width: 400px; }
@@ -35,6 +45,9 @@
         .btn { background: #222; color: white; border: 1px solid #ff4444; padding: 8px 12px; margin: 4px 0; cursor: pointer; font-size: 14px; border-radius: 6px; transition: 0.2s; width: 100%; }
         .btn:hover { background: #ff4444; color: black; font-weight: bold; }
         .btn:disabled { background: #444; border-color: #666; color: #aaa; cursor: not-allowed; }
+
+        .quality-btn { border: 1px solid #00ffff; color: #00ffff; background: #002233; margin: 5px 0; padding: 10px; font-weight: bold; }
+        .quality-btn.active { background: #00ffff; color: #000; }
         
         .weapon-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; background: rgba(255,255,255,0.05); padding: 8px 10px; border-radius: 6px; gap: 6px; }
         .elem-btn { padding: 4px 6px; font-size: 11px; border-radius: 4px; cursor: pointer; white-space: nowrap; font-weight: bold; }
@@ -64,13 +77,14 @@
     <div id="difficulty-screen">
         <h1 style="font-size: 36px; margin-bottom: 10px; text-shadow: 0 0 10px #ff0000;">☣️ 屍境重構：廢墟決戰</h1>
         <p style="color: #aaa; margin-bottom: 30px;">請選擇遊戲難度以開始作戰</p>
-        <button class="btn diff-btn diff-easy" onclick="selectDifficulty('easy')">🟢 簡單 (Easy)<br><span style="font-size:12px; font-weight:normal;">Boss傷害:10 | 小怪傷害:0.5/0.1s | 💰2倍</span></button>
-        <button class="btn diff-btn diff-medium" onclick="selectDifficulty('medium')">🟡 中等 (Medium)<br><span style="font-size:12px; font-weight:normal;">Boss傷害:20 | 小怪傷害:1.0/0.1s | 💰1.4倍</span></button>
-        <button class="btn diff-btn diff-hard" onclick="selectDifficulty('hard')">🔴 困難 (Hard)<br><span style="font-size:12px; font-weight:normal;">Boss傷害:30 | 小怪傷害:1.5/0.1s | 💰0.9倍</span></button>
+        <button class="btn diff-btn diff-easy" onclick="selectDifficulty('easy')">🟢 簡單 (Easy)<br><span style="font-size:12px; font-weight:normal;">Boss傷害:20 | 小怪傷害:1.0/0.1s | 💰2倍</span></button>
+        <button class="btn diff-btn diff-medium" onclick="selectDifficulty('medium')">🟡 中等 (Medium)<br><span style="font-size:12px; font-weight:normal;">Boss傷害:40 | 小怪傷害:2.0/0.1s | 💰1.4倍</span></button>
+        <button class="btn diff-btn diff-hard" onclick="selectDifficulty('hard')">🔴 困難 (Hard)<br><span style="font-size:12px; font-weight:normal;">Boss傷害:60 | 小怪傷害:3.0/0.1s | 💰0.9倍</span></button>
     </div>
 
     <div id="damage-flash"></div>
     <div id="ui">
+        <button class="pause-btn" onclick="togglePauseMenu()">⏸️ 暫停 / 畫質設定</button>
         <div>❤️ 血量: <span id="hp" style="color: #ff5555; font-weight: bold;">100</span></div>
         <div>💰 金幣: <span id="gold" style="color: #ffd700; font-weight: bold;">0</span></div>
         <div>🌊 當前波次: <span id="wave" style="color: #00ffff; font-weight: bold;">1</span></div>
@@ -78,6 +92,17 @@
         <div>🎯 當前難度: <span id="difficulty-tag" style="font-weight: bold;">簡單</span></div>
         <div>🔫 武器: <span id="weapon">戰術手槍</span> (<span id="ammo">12/12</span>)</div>
         <div style="font-size:12px; color:#aaa; margin-top:4px;">[WASD] 移動 | [滑鼠] 水平旋轉視角 | [空白鍵 Space] 跳躍 | [左鍵] 連射 | [1-6] 切換武器 | [R] 換彈 | [E] 商店</div>
+    </div>
+
+    <!-- ⏸️ 暫停與畫質設定選單 -->
+    <div id="pause-menu">
+        <h2 style="margin-top:0; color:#00ffff;">⏸️ 遊戲暫停</h2>
+        <p style="color:#ccc; font-size:14px;">調整畫質設定：</p>
+        <button class="btn quality-btn" id="q-low" onclick="setQuality('low')">低畫質 (無特效、流暢首選)</button>
+        <button class="btn quality-btn active" id="q-mid" onclick="setQuality('mid')">中畫質 (預設特效)</button>
+        <button class="btn quality-btn" id="q-high" onclick="setQuality('high')">高畫質 (火燒、炸彈爆炸、電擊連線)</button>
+        <br><br>
+        <button class="btn" style="background: #0088cc; font-size: 16px; padding: 10px;" onclick="togglePauseMenu()">▶️ 繼續遊戲</button>
     </div>
     
     <div id="minimap-container">
@@ -131,15 +156,17 @@
     </div>
 
 <script>
-let scene, camera, renderer;
+let scene, camera, renderer, dirLight;
 let hp = 100, maxHp = 100, gold = 0, wave = 1;
 let totalZombiesInWave = 0, killedZombiesInWave = 0;
 let moveSpeed = 0.18, damageMult = 1.0;
 let fireRateMult = 1.0;
 
+let graphicsQuality = 'mid'; // 'low', 'mid', 'high'
+
 let difficulty = 'easy';
-// ⚙️ 設定各難度的 Boss 傷害與小怪傷害 (以 0.1 秒算一次)
-let diffMult = { hp: 1.0, speed: 1.0, initialZombies: 10, goldMult: 2.0, bossDmg: 10, normalDmg: 0.5, label: "🟢 簡單", color: "#00ff66" };
+// ⚙️ 設定各難度的 Boss 傷害與小怪傷害 (以 0.1 秒算一次) — 已全部乘以 2
+let diffMult = { hp: 1.0, speed: 1.0, initialZombies: 10, goldMult: 2.0, bossDmg: 20, normalDmg: 1.0, label: "🟢 簡單", color: "#00ff66" };
 
 let yVelocity = 0;
 const gravity = 0.015;
@@ -149,9 +176,9 @@ let isGrounded = true;
 let lastReloadTime = 0;
 let hasAutoReload = false;
 
-let zombies = [], bullets = [], enemyBullets = [], particles = [], medkits = [];
+let zombies = [], bullets = [], enemyBullets = [], particles = [], medkits = [], lightningBeams = [], expRings = [];
 let keys = {};
-let isPaused = false, isGameOver = false;
+let isPaused = false, isGameOver = false, isPauseMenuOpen = false;
 let waveTransitioning = false;
 let isMouseDown = false;
 const MAP_SIZE = 40;
@@ -171,15 +198,15 @@ const weapons = {
 };
 let currentWeaponKey = 1;
 
-// 🎯 選擇難度並載入對應傷害參數
+// 🎯 選擇難度並載入對應傷害參數 (全部乘 2)
 function selectDifficulty(diff) {
     difficulty = diff;
     if (diff === 'easy') {
-        diffMult = { hp: 1.0, speed: 1.0, initialZombies: 10, goldMult: 2.0, bossDmg: 10, normalDmg: 0.5, label: "🟢 簡單", color: "#00ff66" };
+        diffMult = { hp: 1.0, speed: 1.0, initialZombies: 10, goldMult: 2.0, bossDmg: 20, normalDmg: 1.0, label: "🟢 簡單", color: "#00ff66" };
     } else if (diff === 'medium') {
-        diffMult = { hp: 1.5, speed: 1.1, initialZombies: 20, goldMult: 1.4, bossDmg: 20, normalDmg: 1.0, label: "🟡 中等", color: "#ffaa00" };
+        diffMult = { hp: 1.5, speed: 1.1, initialZombies: 20, goldMult: 1.4, bossDmg: 40, normalDmg: 2.0, label: "🟡 中等", color: "#ffaa00" };
     } else if (diff === 'hard') {
-        diffMult = { hp: 2.25, speed: 1.2, initialZombies: 30, goldMult: 0.9, bossDmg: 30, normalDmg: 1.5, label: "🔴 困難", color: "#ff3333" };
+        diffMult = { hp: 2.25, speed: 1.2, initialZombies: 30, goldMult: 0.9, bossDmg: 60, normalDmg: 3.0, label: "🔴 困難", color: "#ff3333" };
     }
 
     const tag = document.getElementById('difficulty-tag');
@@ -210,7 +237,7 @@ function init() {
     const ambientLight = new THREE.AmbientLight(0x333344, 1.2);
     scene.add(ambientLight);
 
-    const dirLight = new THREE.DirectionalLight(0xffaa66, 1.5);
+    dirLight = new THREE.DirectionalLight(0xffaa66, 1.5);
     dirLight.position.set(20, 40, 20);
     dirLight.castShadow = true;
     dirLight.shadow.mapSize.width = 2048;
@@ -236,8 +263,8 @@ function init() {
     });
     document.addEventListener('keyup', (e) => keys[e.key.toLowerCase()] = false);
     
-    document.body.addEventListener('click', () => {
-        if (!isPaused && !isGameOver) document.body.requestPointerLock();
+    document.body.addEventListener('click', (e) => {
+        if (!isPaused && !isGameOver && e.target.tagName !== 'BUTTON') document.body.requestPointerLock();
     });
     
     document.addEventListener('mousemove', (e) => {
@@ -271,6 +298,36 @@ function init() {
 
     startNextWaveCountdown();
     animate();
+}
+
+function setQuality(q) {
+    graphicsQuality = q;
+    document.querySelectorAll('.quality-btn').forEach(btn => btn.classList.remove('active'));
+    document.getElementById(`q-${q}`).classList.add('active');
+
+    if (q === 'low') {
+        renderer.shadowMap.enabled = false;
+        scene.fog = null;
+        if (dirLight) dirLight.castShadow = false;
+    } else {
+        renderer.shadowMap.enabled = true;
+        scene.fog = new THREE.FogExp2(0x0a0a12, 0.02);
+        if (dirLight) dirLight.castShadow = true;
+    }
+}
+
+function togglePauseMenu() {
+    if (isGameOver) return;
+    isPauseMenuOpen = !isPauseMenuOpen;
+    isPaused = isPauseMenuOpen;
+    isMouseDown = false;
+
+    document.getElementById('pause-menu').style.display = isPauseMenuOpen ? 'block' : 'none';
+    if (isPauseMenuOpen) {
+        document.exitPointerLock();
+    } else {
+        document.body.requestPointerLock();
+    }
 }
 
 function buildEnvironment() {
@@ -458,7 +515,6 @@ function zombieShoot(zombie) {
     const bullet = new THREE.Mesh(geo, mat);
     bullet.position.copy(startPos);
 
-    // 🎯 遠程子彈傷害套用 Boss 傷害設定
     enemyBullets.push({ mesh: bullet, dir, speed: zombie.isBoss ? 0.35 : 0.28, life: 120, damage: zombie.isBoss ? diffMult.bossDmg : (diffMult.bossDmg * 0.5) });
     scene.add(bullet);
 }
@@ -512,8 +568,9 @@ function spawnWave() {
     }, spawnInterval);
 }
 
-function createHitParticles(pos, colorHex) {
-    for (let i = 0; i < 6; i++) {
+function createHitParticles(pos, colorHex, count = 6) {
+    if (graphicsQuality === 'low') return;
+    for (let i = 0; i < count; i++) {
         const pGeo = new THREE.SphereGeometry(0.06);
         const pMat = new THREE.MeshBasicMaterial({ color: colorHex });
         const p = new THREE.Mesh(pGeo, pMat);
@@ -527,6 +584,36 @@ function createHitParticles(pos, colorHex) {
         particles.push({ mesh: p, vel, life: 15 });
         scene.add(p);
     }
+}
+
+// ⚡ 高畫質閃電連結雷射
+function createLightningBeam(pos1, pos2) {
+    const distance = pos1.distanceTo(pos2);
+    const geo = new THREE.CylinderGeometry(0.05, 0.05, distance, 8);
+    const mat = new THREE.MeshBasicMaterial({ color: 0x00ffff });
+    const beam = new THREE.Mesh(geo, mat);
+
+    const midPoint = new THREE.Vector3().addVectors(pos1, pos2).multiplyScalar(0.5);
+    beam.position.copy(midPoint);
+
+    beam.lookAt(pos2);
+    beam.rotateX(Math.PI / 2);
+
+    scene.add(beam);
+    lightningBeams.push({ mesh: beam, life: 6 });
+}
+
+// 💥 高畫質爆炸光環效果
+function createExplosionRing(pos, maxRadius) {
+    const geo = new THREE.RingGeometry(0.1, 0.2, 32);
+    const mat = new THREE.MeshBasicMaterial({ color: 0xffaa00, side: THREE.DoubleSide, transparent: true, opacity: 0.8 });
+    const ring = new THREE.Mesh(geo, mat);
+    ring.rotation.x = -Math.PI / 2;
+    ring.position.copy(pos);
+    ring.position.y = 0.1;
+
+    scene.add(ring);
+    expRings.push({ mesh: ring, radius: 0.1, maxRadius: maxRadius, opacity: 0.8 });
 }
 
 function shoot() {
@@ -645,13 +732,15 @@ function switchWeapon(key) {
 }
 
 function toggleShop() {
-    if (isGameOver) return;
+    if (isGameOver || isPauseMenuOpen) return;
     isPaused = !isPaused;
     isMouseDown = false;
     document.getElementById('shop').style.display = isPaused ? 'block' : 'none';
     if (isPaused) {
         document.exitPointerLock();
         updateShopUI();
+    } else {
+        document.body.requestPointerLock();
     }
 }
 
@@ -870,6 +959,11 @@ function triggerElementEffect(hitZombie, bullet) {
             if (z !== hitZombie && count < maxTargets && z.mesh.position.distanceTo(hitZombie.mesh.position) < (5.0 + bullet.elem.elecLv)) {
                 z.hp -= chainDmg;
                 createHitParticles(z.mesh.position, 0x00ffff);
+                
+                // ⚡ 高畫質模式下的閃電連線效果
+                if (graphicsQuality === 'high') {
+                    createLightningBeam(hitZombie.mesh.position.clone().add(new THREE.Vector3(0, 1, 0)), z.mesh.position.clone().add(new THREE.Vector3(0, 1, 0)));
+                }
                 count++;
             }
         });
@@ -878,7 +972,13 @@ function triggerElementEffect(hitZombie, bullet) {
     if (bullet.elem.bombLv > 0) {
         let radius = 3.0 + (bullet.elem.bombLv * 0.8);
         let bombDmg = bullet.damage * (0.3 + bullet.elem.bombLv * 0.2);
-        createHitParticles(bullet.mesh.position, 0xffaa00);
+        createHitParticles(bullet.mesh.position, 0xffaa00, 15);
+        
+        // 💥 高畫質模式下的擴散爆炸光環
+        if (graphicsQuality === 'high') {
+            createExplosionRing(bullet.mesh.position.clone(), radius);
+        }
+
         zombies.forEach(z => {
             if (z.mesh.position.distanceTo(bullet.mesh.position) < radius) {
                 z.hp -= bombDmg;
@@ -894,9 +994,10 @@ function triggerElementEffect(hitZombie, bullet) {
 
 function handleZombieDeath(z) {
     if (z.isExploder) {
-        createHitParticles(z.mesh.position, 0xff3300);
+        createHitParticles(z.mesh.position, 0xff3300, 20);
+        if (graphicsQuality === 'high') createExplosionRing(z.mesh.position.clone(), 4.0);
         if (camera.position.distanceTo(z.mesh.position) < 4.0) {
-            hp -= diffMult.normalDmg * 20; // 自爆為相當於2秒的小怪傷害
+            hp -= diffMult.normalDmg * 20;
             showMsg("💥 遭受自爆範圍傷害！");
         }
     }
@@ -958,6 +1059,30 @@ function animate() {
             
             scene.remove(m.mesh);
             medkits.splice(i, 1);
+        }
+    }
+
+    // 清理高畫質電擊雷射 beam
+    for (let i = lightningBeams.length - 1; i >= 0; i--) {
+        let beam = lightningBeams[i];
+        beam.life--;
+        if (beam.life <= 0) {
+            scene.remove(beam.mesh);
+            lightningBeams.splice(i, 1);
+        }
+    }
+
+    // 清理高畫質爆炸環
+    for (let i = expRings.length - 1; i >= 0; i--) {
+        let ring = expRings[i];
+        ring.radius += (ring.maxRadius - ring.radius) * 0.2;
+        ring.mesh.scale.set(ring.radius, ring.radius, 1);
+        ring.opacity -= 0.08;
+        ring.mesh.material.opacity = ring.opacity;
+
+        if (ring.opacity <= 0) {
+            scene.remove(ring.mesh);
+            expRings.splice(i, 1);
         }
     }
 
@@ -1045,8 +1170,14 @@ function animate() {
         if (z.burnTimer > 0) {
             z.burnTimer -= 0.05;
             z.hp -= z.burnDmg * 0.05;
-            if (Math.random() < 0.3) createHitParticles(z.mesh.position, 0xff3300);
             
+            // 🔥 高畫質模式下的燃燒冒煙/火花效果
+            if (graphicsQuality === 'high') {
+                createHitParticles(z.mesh.position.clone().add(new THREE.Vector3(0, Math.random() * z.scale, 0)), 0xff3300, 2);
+            } else if (graphicsQuality === 'mid' && Math.random() < 0.3) {
+                createHitParticles(z.mesh.position, 0xff3300, 1);
+            }
+
             if (z.hp <= 0) {
                 handleZombieDeath(z);
                 zombies.splice(i, 1);
@@ -1086,7 +1217,7 @@ function animate() {
         
         z.mesh.lookAt(camera.position.x, 0, camera.position.z);
 
-        // ⚔️ 依據 Boss 或小怪扣除對應數量的傷害 (60fps下 每0.1秒約6幀)
+        // ⚔️ 碰撞傷害： Boss 或小怪扣除對應數量的傷害
         if (horizontalDist <= attackRange + 0.3 && !isPlayerAboveEnemy) {
             let dmgPerFrame = z.isBoss ? (diffMult.bossDmg / 6) : (diffMult.normalDmg / 6);
             hp -= dmgPerFrame;
