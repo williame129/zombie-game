@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>屍境重構：廢墟決戰 v22.0 (Admin Pro 特化版)</title>
+    <title>屍境重構：廢墟決戰 v24.0 (地雷戰術版)</title>
     <style>
         * { box-sizing: border-box; }
         html, body { width: 100%; height: 100%; margin: 0; padding: 0; overflow: hidden; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; user-select: none; background: #000; }
@@ -34,7 +34,7 @@
             position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
             background: rgba(10, 10, 20, 0.95); color: white; padding: 25px; border-radius: 12px;
             display: none; text-align: center; border: 2px solid #00ffff; box-shadow: 0 0 25px rgba(0,255,255,0.5);
-            z-index: 40; width: 90%; max-width: 400px;
+            z-index: 40; width: 90%; max-width: 420px;
         }
 
         #shop { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(15, 15, 25, 0.95); color: white; padding: 20px; border-radius: 12px; display: none; text-align: center; border: 2px solid #ff4444; box-shadow: 0 0 20px rgba(255,68,68,0.4); z-index: 20; max-height: 85vh; width: 95%; max-width: 650px; overflow-y: auto; }
@@ -46,8 +46,10 @@
         .btn:hover { background: #ff4444; color: black; font-weight: bold; }
         .btn:disabled { background: #444; border-color: #666; color: #aaa; cursor: not-allowed; }
 
-        .quality-btn { border: 1px solid #00ffff; color: #00ffff; background: #002233; margin: 5px 0; padding: 10px; font-weight: bold; }
+        .quality-btn { border: 1px solid #00ffff; color: #00ffff; background: #002233; margin: 4px 0; padding: 8px; font-weight: bold; }
         .quality-btn.active { background: #00ffff; color: #000; }
+        .quality-ultra-low { border-color: #00ff66; color: #00ff66; background: #002211; }
+        .quality-ultra-low.active { background: #00ff66; color: #000; }
         
         .weapon-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; background: rgba(255,255,255,0.05); padding: 8px 10px; border-radius: 6px; gap: 6px; }
         .elem-btn { padding: 4px 6px; font-size: 11px; border-radius: 4px; cursor: pointer; white-space: nowrap; font-weight: bold; }
@@ -91,16 +93,17 @@
         <div>👾 剩餘敵人: <span id="zombie-count" style="color: #ff4444; font-weight: bold;">0</span></div>
         <div>🎯 當前難度: <span id="difficulty-tag" style="font-weight: bold;">簡單</span></div>
         <div>🔫 武器: <span id="weapon">戰術手槍</span> (<span id="ammo">12/12</span>)</div>
-        <div style="font-size:12px; color:#aaa; margin-top:4px;">[WASD] 移動 | [滑鼠] 水平旋轉視角 | [空白鍵 Space] 跳躍 | [左鍵] 連射 | [1-7] 切換武器 | [R] 換彈 | [E] 商店 | [P] 暫停</div>
+        <div style="font-size:12px; color:#aaa; margin-top:4px;">[WASD] 移動 | [滑鼠] 視角 | [Space] 跳躍 | [左鍵] 攻擊 | [Q] 放置地雷(💰100) | [1-7] 切換武器 | [R] 換彈 | [E] 商店 | [P] 暫停</div>
     </div>
 
     <!-- ⏸️ 暫停與畫質設定選單 -->
     <div id="pause-menu">
         <h2 style="margin-top:0; color:#00ffff;">⏸️ 遊戲暫停 (按 P 恢復)</h2>
-        <p style="color:#ccc; font-size:14px;">調整畫質設定：</p>
-        <button class="btn quality-btn" id="q-low" onclick="setQuality('low')">低畫質 (無特效、流暢首選)</button>
-        <button class="btn quality-btn active" id="q-mid" onclick="setQuality('mid')">中畫質 (預設特效)</button>
-        <button class="btn quality-btn" id="q-high" onclick="setQuality('high')">高畫質 (火燒、炸彈爆炸、電擊連線)</button>
+        <p style="color:#ccc; font-size:14px;">調整畫質設定（學校平板建議選第一項）：</p>
+        <button class="btn quality-btn quality-ultra-low" id="q-ultralow" onclick="setQuality('ultralow')">⚡ 極速省電 (學校平板/低配極簡推薦)</button>
+        <button class="btn quality-btn" id="q-low" onclick="setQuality('low')">低畫質 (無陰影、基本效能)</button>
+        <button class="btn quality-btn active" id="q-mid" onclick="setQuality('mid')">中畫質 (標準特效)</button>
+        <button class="btn quality-btn" id="q-high" onclick="setQuality('high')">高畫質 (完整粒子/爆炸/閃電特效)</button>
         <br><br>
         <button class="btn" style="background: #0088cc; font-size: 16px; padding: 10px;" onclick="togglePauseMenu()">▶️ 繼續遊戲</button>
     </div>
@@ -159,12 +162,13 @@
 <script>
 let scene, camera, renderer, dirLight;
 let hp = 100, maxHp = 100, gold = 0, wave = 1;
-let medkitHealAmount = 20; // 醫療包基礎回復量
+let medkitHealAmount = 20;
 let totalZombiesInWave = 0, killedZombiesInWave = 0;
 let moveSpeed = 0.18, damageMult = 1.0;
 let fireRateMult = 1.0;
 
-let graphicsQuality = 'mid'; // 'low', 'mid', 'high'
+let graphicsQuality = 'mid';
+let frameCount = 0;
 
 let difficulty = 'easy';
 let diffMult = { hp: 1.0, speed: 1.0, initialZombies: 10, goldMult: 2.0, bossDmg: 20, normalDmg: 1.0, label: "🟢 簡單", color: "#00ff66" };
@@ -177,7 +181,7 @@ let isGrounded = true;
 let lastReloadTime = 0;
 let hasAutoReload = false;
 
-let zombies = [], bullets = [], enemyBullets = [], particles = [], medkits = [], lightningBeams = [], expRings = [];
+let zombies = [], bullets = [], enemyBullets = [], particles = [], medkits = [], lightningBeams = [], expRings = [], landmines = [];
 let keys = {};
 let isPaused = false, isGameOver = false, isPauseMenuOpen = false;
 let waveTransitioning = false;
@@ -226,7 +230,7 @@ function init() {
     camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
     camera.position.set(0, 1.7, 0);
 
-    renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -241,8 +245,8 @@ function init() {
     dirLight = new THREE.DirectionalLight(0xffaa66, 1.5);
     dirLight.position.set(20, 40, 20);
     dirLight.castShadow = true;
-    dirLight.shadow.mapSize.width = 2048;
-    dirLight.shadow.mapSize.height = 2048;
+    dirLight.shadow.mapSize.width = 1024;
+    dirLight.shadow.mapSize.height = 1024;
     scene.add(dirLight);
 
     buildEnvironment();
@@ -250,7 +254,6 @@ function init() {
     document.addEventListener('keydown', (e) => {
         if (isGameOver) return;
         
-        // 按下 P 鍵切換暫停
         if (e.key === 'p' || e.key === 'P') {
             togglePauseMenu();
             return;
@@ -265,6 +268,7 @@ function init() {
 
         keys[e.key.toLowerCase()] = true;
         if(e.key === 'e' || e.key === 'E') toggleShop();
+        if(e.key === 'q' || e.key === 'Q') placeLandmine();
         if(['1','2','3','4','5','6','7'].includes(e.key)) switchWeapon(parseInt(e.key));
         if(e.key.toLowerCase() === 'r') reloadAmmo();
     });
@@ -312,11 +316,18 @@ function setQuality(q) {
     document.querySelectorAll('.quality-btn').forEach(btn => btn.classList.remove('active'));
     document.getElementById(`q-${q}`).classList.add('active');
 
-    if (q === 'low') {
+    if (q === 'ultralow') {
+        renderer.setPixelRatio(0.6);
+        renderer.shadowMap.enabled = false;
+        scene.fog = null;
+        if (dirLight) dirLight.castShadow = false;
+    } else if (q === 'low') {
+        renderer.setPixelRatio(0.85);
         renderer.shadowMap.enabled = false;
         scene.fog = null;
         if (dirLight) dirLight.castShadow = false;
     } else {
+        renderer.setPixelRatio(window.devicePixelRatio || 1);
         renderer.shadowMap.enabled = true;
         scene.fog = new THREE.FogExp2(0x0a0a12, 0.02);
         if (dirLight) dirLight.castShadow = true;
@@ -367,6 +378,67 @@ function buildEnvironment() {
         wall.receiveShadow = true;
         scene.add(wall);
     }
+}
+
+function createLandmineMesh() {
+    const group = new THREE.Group();
+    const baseGeo = new THREE.CylinderGeometry(0.5, 0.6, 0.15, 16);
+    const baseMat = new THREE.MeshStandardMaterial({ color: 0x333333, metalness: 0.8, roughness: 0.2 });
+    const base = new THREE.Mesh(baseGeo, baseMat);
+    base.position.y = 0.075;
+    group.add(base);
+
+    const lightGeo = new THREE.SphereGeometry(0.12, 8, 8);
+    const lightMat = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+    const light = new THREE.Mesh(lightGeo, lightMat);
+    light.position.y = 0.18;
+    group.add(light);
+
+    return group;
+}
+
+function placeLandmine() {
+    if (isPaused || isGameOver) return;
+    const cost = 100;
+    if (gold < cost) {
+        showMsg("❌ 金幣不足 100，無法放置地雷！");
+        return;
+    }
+
+    gold -= cost;
+    updateUI();
+
+    const mesh = createLandmineMesh();
+    mesh.position.set(camera.position.x, 0, camera.position.z);
+    scene.add(mesh);
+
+    landmines.push({ mesh, radius: 2.5, explodeRadius: 8.0, damage: 500 });
+    showMsg("💣 已放置戰術高爆地雷！");
+}
+
+function explodeLandmine(mineIndex) {
+    const mine = landmines[mineIndex];
+    const pos = mine.mesh.position.clone();
+
+    createHitParticles(pos, 0xffaa00, 30);
+    if (graphicsQuality !== 'ultralow') {
+        createExplosionRing(pos, mine.explodeRadius);
+    }
+
+    let explosionDmg = mine.damage * damageMult;
+    for (let j = zombies.length - 1; j >= 0; j--) {
+        let z = zombies[j];
+        if (z.mesh.position.distanceTo(pos) <= mine.explodeRadius) {
+            z.hp -= explosionDmg;
+            if (z.hp <= 0) {
+                handleZombieDeath(z);
+                zombies.splice(j, 1);
+            }
+        }
+    }
+
+    scene.remove(mine.mesh);
+    landmines.splice(mineIndex, 1);
 }
 
 function createMedkitMesh() {
@@ -576,7 +648,7 @@ function spawnWave() {
 }
 
 function createHitParticles(pos, colorHex, count = 6) {
-    if (graphicsQuality === 'low') return;
+    if (graphicsQuality === 'low' || graphicsQuality === 'ultralow') return;
     for (let i = 0; i < count; i++) {
         const pGeo = new THREE.SphereGeometry(0.06);
         const pMat = new THREE.MeshBasicMaterial({ color: colorHex });
@@ -594,6 +666,7 @@ function createHitParticles(pos, colorHex, count = 6) {
 }
 
 function createLightningBeam(pos1, pos2) {
+    if (graphicsQuality === 'ultralow' || graphicsQuality === 'low') return;
     const distance = pos1.distanceTo(pos2);
     const geo = new THREE.CylinderGeometry(0.05, 0.05, distance, 8);
     const mat = new THREE.MeshBasicMaterial({ color: 0x00ffff });
@@ -610,6 +683,7 @@ function createLightningBeam(pos1, pos2) {
 }
 
 function createExplosionRing(pos, maxRadius) {
+    if (graphicsQuality === 'ultralow' || graphicsQuality === 'low') return;
     const geo = new THREE.RingGeometry(0.1, 0.2, 32);
     const mat = new THREE.MeshBasicMaterial({ color: 0xffaa00, side: THREE.DoubleSide, transparent: true, opacity: 0.8 });
     const ring = new THREE.Mesh(geo, mat);
@@ -621,7 +695,6 @@ function createExplosionRing(pos, maxRadius) {
     expRings.push({ mesh: ring, radius: 0.1, maxRadius: maxRadius, opacity: 0.8 });
 }
 
-// 發射子彈邏輯（支援 Admin Pro 散射與分裂）
 function shoot() {
     const w = weapons[currentWeaponKey];
     if (!w.unlocked) return;
@@ -649,8 +722,8 @@ function shoot() {
             damage: (w.dmg * damageMult) * (isSplitBullet ? 0.6 : 1.0), 
             life: 60, 
             color: isSplitBullet ? 0xff00aa : bColor, 
-            canSplit: w.split && !isSplitBullet, // 是否有分裂特性
-            pierceLeft: (w.split || currentWeaponKey === 7) ? 1 : 0, // 可以穿透一次敵人
+            canSplit: w.split && !isSplitBullet,
+            pierceLeft: (w.split || currentWeaponKey === 7) ? 1 : 0,
             ignoreEnemy: hitEnemy,
             elem: {
                 fireLv: w.elem.fire.lv,
@@ -679,7 +752,6 @@ function shoot() {
     }
 }
 
-// 觸發 Admin Pro 的分裂子彈 (打到第一個敵人時分裂成 3 顆)
 function triggerBulletSplit(bullet, hitEnemy) {
     const splitCount = 3;
     const baseDir = bullet.dir.clone();
@@ -846,12 +918,10 @@ function buyUpgrade(type) {
     if (gold >= cost) {
         gold -= cost;
         if (type === 'hp') {
-            // 血量乘以 1.3 (100 -> 130 -> 169...)
             maxHp = Math.round(maxHp * 1.3 * 10) / 10;
             hp = Math.round((hp * 1.3) * 10) / 10;
             showMsg(`❤️ 血量上限提升至 ${maxHp}！`);
         } else if (type === 'medkit') {
-            // 醫療包回復效果乘以 1.3
             medkitHealAmount = Math.round(medkitHealAmount * 1.3 * 10) / 10;
             showMsg(`💚 醫療包回復效果提升至 ${medkitHealAmount} HP！`);
         } else if (type === 'dmg') {
@@ -960,6 +1030,14 @@ function drawMinimap() {
         minimapCtx.fillStyle = '#00ff66';
         minimapCtx.beginPath();
         minimapCtx.arc(p.x, p.y, 3, 0, Math.PI * 2);
+        minimapCtx.fill();
+    });
+
+    landmines.forEach(m => {
+        const p = mapToCanvas(m.mesh.position.x, m.mesh.position.z);
+        minimapCtx.fillStyle = '#ffaa00';
+        minimapCtx.beginPath();
+        minimapCtx.arc(p.x, p.y, 2.5, 0, Math.PI * 2);
         minimapCtx.fill();
     });
 
@@ -1073,6 +1151,8 @@ function animate() {
     requestAnimationFrame(animate);
     if (isPaused || isGameOver) return;
 
+    frameCount++;
+
     if (isMouseDown && weapons[currentWeaponKey].auto) {
         shoot();
     }
@@ -1113,6 +1193,17 @@ function animate() {
         }
     }
 
+    for (let i = landmines.length - 1; i >= 0; i--) {
+        let lm = landmines[i];
+        for (let j = 0; j < zombies.length; j++) {
+            let z = zombies[j];
+            if (z.mesh.position.distanceTo(lm.mesh.position) <= lm.radius) {
+                explodeLandmine(i);
+                break;
+            }
+        }
+    }
+
     for (let i = lightningBeams.length - 1; i >= 0; i--) {
         let beam = lightningBeams[i];
         beam.life--;
@@ -1135,7 +1226,6 @@ function animate() {
         }
     }
 
-    // 子彈飛行與碰撞（含 Admin Pro 分裂與穿透機制）
     for (let i = bullets.length - 1; i >= 0; i--) {
         let b = bullets[i];
         b.mesh.position.addScaledVector(b.dir, 0.9);
@@ -1143,7 +1233,7 @@ function animate() {
 
         for (let j = zombies.length - 1; j >= 0; j--) {
             let z = zombies[j];
-            if (b.ignoreEnemy === z) continue; // 避免剛產生的分裂彈重複擊中自身
+            if (b.ignoreEnemy === z) continue;
 
             if (b.mesh.position.distanceTo(z.mesh.position.clone().add(new THREE.Vector3(0, 1, 0))) < 0.9 * z.scale) {
                 z.hp -= b.damage;
@@ -1151,28 +1241,15 @@ function animate() {
                 
                 createHitParticles(b.mesh.position, b.color);
                 triggerElementEffect(z, b);
-                
-                z.mesh.children.forEach(child => {
-                    if (child.material) child.material.color.setHex(0xffffff);
-                });
-                setTimeout(() => {
-                    if (z.mesh) {
-                        z.mesh.children.forEach(child => {
-                            if (child.material && child.material !== scene.eyeMat) child.material.color.setHex(z.color);
-                        });
-                    }
-                }, 70);
 
-                // Admin Pro 分裂機制：打到第一個敵人時分裂 3 顆彈藥
                 if (b.canSplit) {
                     triggerBulletSplit(b, z);
                     b.canSplit = false;
                 }
 
-                // 穿透判定 (允許穿越 1 個敵人)
                 if (b.pierceLeft > 0) {
                     b.pierceLeft--;
-                    b.ignoreEnemy = z; // 下一幀忽略該敵人
+                    b.ignoreEnemy = z;
                 } else {
                     scene.remove(b.mesh);
                     bullets.splice(i, 1);
@@ -1203,7 +1280,7 @@ function animate() {
 
             const flash = document.getElementById('damage-flash');
             flash.style.display = 'block';
-            setTimeout(() => flash.style.display = 'none', 80);
+            setTimeout(() => flash.style.display = 'none', 30);
 
             if (hp <= 0) gameOver();
 
@@ -1234,12 +1311,6 @@ function animate() {
         if (z.burnTimer > 0) {
             z.burnTimer -= 0.05;
             z.hp -= z.burnDmg * 0.05;
-            
-            if (graphicsQuality === 'high') {
-                createHitParticles(z.mesh.position.clone().add(new THREE.Vector3(0, Math.random() * z.scale, 0)), 0xff3300, 2);
-            } else if (graphicsQuality === 'mid' && Math.random() < 0.3) {
-                createHitParticles(z.mesh.position, 0xff3300, 1);
-            }
 
             if (z.hp <= 0) {
                 handleZombieDeath(z);
@@ -1300,7 +1371,10 @@ function animate() {
         startNextWaveCountdown();
     }
 
-    drawMinimap();
+    if (graphicsQuality !== 'ultralow' || frameCount % 2 === 0) {
+        drawMinimap();
+    }
+    
     renderer.render(scene, camera);
 }
 
