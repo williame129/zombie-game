@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>屍境重構：廢墟決戰 v21.0 (畫質選單與傷害倍增版)</title>
+    <title>屍境重構：廢墟決戰 v22.0 (Admin Pro 特化版)</title>
     <style>
         * { box-sizing: border-box; }
         html, body { width: 100%; height: 100%; margin: 0; padding: 0; overflow: hidden; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; user-select: none; background: #000; }
@@ -37,7 +37,7 @@
             z-index: 40; width: 90%; max-width: 400px;
         }
 
-        #shop { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(15, 15, 25, 0.95); color: white; padding: 20px; border-radius: 12px; display: none; text-align: center; border: 2px solid #ff4444; box-shadow: 0 0 20px rgba(255,68,68,0.4); z-index: 20; max-height: 85vh; width: 95%; max-width: 600px; overflow-y: auto; }
+        #shop { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(15, 15, 25, 0.95); color: white; padding: 20px; border-radius: 12px; display: none; text-align: center; border: 2px solid #ff4444; box-shadow: 0 0 20px rgba(255,68,68,0.4); z-index: 20; max-height: 85vh; width: 95%; max-width: 650px; overflow-y: auto; }
         
         #game-over-screen { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(20, 0, 0, 0.95); color: white; padding: 25px; border-radius: 15px; display: none; text-align: center; border: 3px solid #ff0000; box-shadow: 0 0 30px rgba(255,0,0,0.8); z-index: 30; width: 90%; max-width: 400px; }
         .stats-box { background: rgba(255,255,255,0.08); margin: 15px 0; padding: 15px; border-radius: 8px; text-align: left; line-height: 1.8; font-size: 15px; }
@@ -84,19 +84,19 @@
 
     <div id="damage-flash"></div>
     <div id="ui">
-        <button class="pause-btn" onclick="togglePauseMenu()">⏸️ 暫停 / 畫質設定</button>
+        <button class="pause-btn" onclick="togglePauseMenu()">⏸️ 暫停 (P) / 畫質設定</button>
         <div>❤️ 血量: <span id="hp" style="color: #ff5555; font-weight: bold;">100</span></div>
         <div>💰 金幣: <span id="gold" style="color: #ffd700; font-weight: bold;">0</span></div>
         <div>🌊 當前波次: <span id="wave" style="color: #00ffff; font-weight: bold;">1</span></div>
         <div>👾 剩餘敵人: <span id="zombie-count" style="color: #ff4444; font-weight: bold;">0</span></div>
         <div>🎯 當前難度: <span id="difficulty-tag" style="font-weight: bold;">簡單</span></div>
         <div>🔫 武器: <span id="weapon">戰術手槍</span> (<span id="ammo">12/12</span>)</div>
-        <div style="font-size:12px; color:#aaa; margin-top:4px;">[WASD] 移動 | [滑鼠] 水平旋轉視角 | [空白鍵 Space] 跳躍 | [左鍵] 連射 | [1-6] 切換武器 | [R] 換彈 | [E] 商店</div>
+        <div style="font-size:12px; color:#aaa; margin-top:4px;">[WASD] 移動 | [滑鼠] 水平旋轉視角 | [空白鍵 Space] 跳躍 | [左鍵] 連射 | [1-7] 切換武器 | [R] 換彈 | [E] 商店 | [P] 暫停</div>
     </div>
 
     <!-- ⏸️ 暫停與畫質設定選單 -->
     <div id="pause-menu">
-        <h2 style="margin-top:0; color:#00ffff;">⏸️ 遊戲暫停</h2>
+        <h2 style="margin-top:0; color:#00ffff;">⏸️ 遊戲暫停 (按 P 恢復)</h2>
         <p style="color:#ccc; font-size:14px;">調整畫質設定：</p>
         <button class="btn quality-btn" id="q-low" onclick="setQuality('low')">低畫質 (無特效、流暢首選)</button>
         <button class="btn quality-btn active" id="q-mid" onclick="setQuality('mid')">中畫質 (預設特效)</button>
@@ -119,7 +119,7 @@
             <h3>武器購買與屬性升級 (火/炸彈/電)</h3>
             
             <script>
-                for(let i=1; i<=6; i++) {
+                for(let i=1; i<=7; i++) {
                     document.write(`
                     <div class="weapon-row">
                         <button class="btn" id="buy-w${i}" style="flex:2.2;" onclick="buyWeapon(${i})">載入中...</button>
@@ -133,8 +133,9 @@
         </div>
 
         <div>
-            <h3>基礎能力強化</h3>
-            <button class="btn" id="btn-up-hp" onclick="buyUpgrade('hp')">提升血量上限 (+25 HP) - 💰 <span id="cost-hp">50</span></button>
+            <h3>基礎能力與機能強化</h3>
+            <button class="btn" id="btn-up-hp" onclick="buyUpgrade('hp')">提升血量上限 (x1.3) - 💰 <span id="cost-hp">50</span></button>
+            <button class="btn" id="btn-up-medkit" onclick="buyUpgrade('medkit')">提升醫療包回復效果 (x1.3) [當前回復: <span id="val-medkit">20</span> HP] - 💰 <span id="cost-medkit">60</span></button>
             <button class="btn" id="btn-up-dmg" onclick="buyUpgrade('dmg')">提升整體傷害 (+20%) - 💰 <span id="cost-dmg">75</span></button>
             <button class="btn" id="btn-up-speed" onclick="buyUpgrade('speed')">戰術機動加速 (+15%) - 💰 <span id="cost-speed">60</span></button>
             <button class="btn" id="btn-up-firerate" onclick="buyUpgrade('firerate')">⚡ 射速提升 (+15%) - 💰 <span id="cost-firerate">80</span></button>
@@ -158,6 +159,7 @@
 <script>
 let scene, camera, renderer, dirLight;
 let hp = 100, maxHp = 100, gold = 0, wave = 1;
+let medkitHealAmount = 20; // 醫療包基礎回復量
 let totalZombiesInWave = 0, killedZombiesInWave = 0;
 let moveSpeed = 0.18, damageMult = 1.0;
 let fireRateMult = 1.0;
@@ -165,7 +167,6 @@ let fireRateMult = 1.0;
 let graphicsQuality = 'mid'; // 'low', 'mid', 'high'
 
 let difficulty = 'easy';
-// ⚙️ 設定各難度的 Boss 傷害與小怪傷害 (以 0.1 秒算一次) — 已全部乘以 2
 let diffMult = { hp: 1.0, speed: 1.0, initialZombies: 10, goldMult: 2.0, bossDmg: 20, normalDmg: 1.0, label: "🟢 簡單", color: "#00ff66" };
 
 let yVelocity = 0;
@@ -186,7 +187,7 @@ const MAP_SIZE = 40;
 let minimapCanvas, minimapCtx;
 let totalKills = 0, totalGoldEarned = 0;
 
-const upgradeCosts = { hp: 50, dmg: 75, speed: 60, firerate: 80, ammo: 70 };
+const upgradeCosts = { hp: 50, medkit: 60, dmg: 75, speed: 60, firerate: 80, ammo: 70 };
 
 const weapons = {
     1: { name: "戰術手槍", maxAmmo: 12, ammo: 12, dmg: 35, baseFireRate: 250, fireRate: 250, auto: false, unlocked: true, price: 0, bulletColor: 0xffff00, elem: { fire: { lv: 0, cost: 500 }, bomb: { lv: 0, cost: 500 }, elec: { lv: 0, cost: 500 } } },
@@ -194,11 +195,11 @@ const weapons = {
     3: { name: "突擊步槍", maxAmmo: 30, ammo: 30, dmg: 40, baseFireRate: 110, fireRate: 110, auto: true, unlocked: false, price: 300, bulletColor: 0xff4500, elem: { fire: { lv: 0, cost: 500 }, bomb: { lv: 0, cost: 500 }, elec: { lv: 0, cost: 500 } } },
     4: { name: "戰術衝鋒槍", maxAmmo: 45, ammo: 45, dmg: 22, baseFireRate: 60, fireRate: 60, auto: true, unlocked: false, price: 600, bulletColor: 0xffff00, elem: { fire: { lv: 0, cost: 500 }, bomb: { lv: 0, cost: 500 }, elec: { lv: 0, cost: 500 } } },
     5: { name: "離子電漿毀滅者", maxAmmo: 25, ammo: 25, dmg: 100, count: 2, baseFireRate: 140, fireRate: 140, auto: true, unlocked: false, price: 1200, bulletColor: 0x00ffff, elem: { fire: { lv: 0, cost: 500 }, bomb: { lv: 0, cost: 500 }, elec: { lv: 0, cost: 500 } } },
-    6: { name: "快速離子電漿毀滅者", maxAmmo: 40, ammo: 40, dmg: 110, count: 2, baseFireRate: 93, fireRate: 93, auto: true, unlocked: false, price: 2500, bulletColor: 0x00ffaa, elem: { fire: { lv: 0, cost: 500 }, bomb: { lv: 0, cost: 500 }, elec: { lv: 0, cost: 500 } } }
+    6: { name: "快速離子電漿毀滅者", maxAmmo: 40, ammo: 40, dmg: 110, count: 2, baseFireRate: 93, fireRate: 93, auto: true, unlocked: false, price: 2500, bulletColor: 0x00ffaa, elem: { fire: { lv: 0, cost: 500 }, bomb: { lv: 0, cost: 500 }, elec: { lv: 0, cost: 500 } } },
+    7: { name: "Admin Pro", maxAmmo: 100, ammo: 100, dmg: 200, count: 12, spread: 0.35, split: true, baseFireRate: 80, fireRate: 80, auto: true, unlocked: false, price: 20000, bulletColor: 0xff00ff, elem: { fire: { lv: 0, cost: 500 }, bomb: { lv: 0, cost: 500 }, elec: { lv: 0, cost: 500 } } }
 };
 let currentWeaponKey = 1;
 
-// 🎯 選擇難度並載入對應傷害參數 (全部乘 2)
 function selectDifficulty(diff) {
     difficulty = diff;
     if (diff === 'easy') {
@@ -249,6 +250,12 @@ function init() {
     document.addEventListener('keydown', (e) => {
         if (isGameOver) return;
         
+        // 按下 P 鍵切換暫停
+        if (e.key === 'p' || e.key === 'P') {
+            togglePauseMenu();
+            return;
+        }
+
         if (e.code === 'Space') {
             if (isGrounded) {
                 yVelocity = jumpStrength;
@@ -258,7 +265,7 @@ function init() {
 
         keys[e.key.toLowerCase()] = true;
         if(e.key === 'e' || e.key === 'E') toggleShop();
-        if(['1','2','3','4','5','6'].includes(e.key)) switchWeapon(parseInt(e.key));
+        if(['1','2','3','4','5','6','7'].includes(e.key)) switchWeapon(parseInt(e.key));
         if(e.key.toLowerCase() === 'r') reloadAmmo();
     });
     document.addEventListener('keyup', (e) => keys[e.key.toLowerCase()] = false);
@@ -390,7 +397,7 @@ function spawnMedkit() {
     mesh.position.set(rx, 0, rz);
 
     scene.add(mesh);
-    medkits.push({ mesh, healAmount: 20 });
+    medkits.push({ mesh });
 }
 
 function createZombieMesh(color, scale, eyeColor = 0x00ffcc, transparent = false, opacity = 1.0) {
@@ -586,7 +593,6 @@ function createHitParticles(pos, colorHex, count = 6) {
     }
 }
 
-// ⚡ 高畫質閃電連結雷射
 function createLightningBeam(pos1, pos2) {
     const distance = pos1.distanceTo(pos2);
     const geo = new THREE.CylinderGeometry(0.05, 0.05, distance, 8);
@@ -603,7 +609,6 @@ function createLightningBeam(pos1, pos2) {
     lightningBeams.push({ mesh: beam, life: 6 });
 }
 
-// 💥 高畫質爆炸光環效果
 function createExplosionRing(pos, maxRadius) {
     const geo = new THREE.RingGeometry(0.1, 0.2, 32);
     const mat = new THREE.MeshBasicMaterial({ color: 0xffaa00, side: THREE.DoubleSide, transparent: true, opacity: 0.8 });
@@ -616,6 +621,7 @@ function createExplosionRing(pos, maxRadius) {
     expRings.push({ mesh: ring, radius: 0.1, maxRadius: maxRadius, opacity: 0.8 });
 }
 
+// 發射子彈邏輯（支援 Admin Pro 散射與分裂）
 function shoot() {
     const w = weapons[currentWeaponKey];
     if (!w.unlocked) return;
@@ -631,19 +637,21 @@ function shoot() {
     else if (w.elem.bomb.lv > 0) bColor = 0xffaa00;
     else if (w.elem.fire.lv > 0) bColor = 0xff3300;
 
-    const createBullet = (dirOffset = new THREE.Vector3()) => {
-        const geo = new THREE.SphereGeometry((currentWeaponKey === 5 || currentWeaponKey === 6) ? 0.2 : 0.08);
-        const mat = new THREE.MeshBasicMaterial({ color: bColor });
+    const createBullet = (originPos, dirVector, isSplitBullet = false, hitEnemy = null) => {
+        const geo = new THREE.SphereGeometry((currentWeaponKey === 5 || currentWeaponKey === 6 || currentWeaponKey === 7) ? 0.22 : 0.08);
+        const mat = new THREE.MeshBasicMaterial({ color: isSplitBullet ? 0xff00aa : bColor });
         const bullet = new THREE.Mesh(geo, mat);
-        bullet.position.copy(camera.position).add(new THREE.Vector3(0, -0.2, 0));
+        bullet.position.copy(originPos);
 
-        const dir = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion).add(dirOffset).normalize();
         bullets.push({ 
             mesh: bullet, 
-            dir: dir, 
-            damage: w.dmg * damageMult, 
+            dir: dirVector.clone().normalize(), 
+            damage: (w.dmg * damageMult) * (isSplitBullet ? 0.6 : 1.0), 
             life: 60, 
-            color: bColor, 
+            color: isSplitBullet ? 0xff00aa : bColor, 
+            canSplit: w.split && !isSplitBullet, // 是否有分裂特性
+            pierceLeft: (w.split || currentWeaponKey === 7) ? 1 : 0, // 可以穿透一次敵人
+            ignoreEnemy: hitEnemy,
             elem: {
                 fireLv: w.elem.fire.lv,
                 bombLv: w.elem.bomb.lv,
@@ -653,13 +661,50 @@ function shoot() {
         scene.add(bullet);
     };
 
+    const origin = camera.position.clone().add(new THREE.Vector3(0, -0.2, 0));
+    const baseDir = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
+
     if (w.count && w.count > 1) {
+        let spreadFactor = w.spread || 0.12;
         for (let i = 0; i < w.count; i++) {
-            let offset = new THREE.Vector3((Math.random()-0.5)*0.12, (Math.random()-0.5)*0.12, (Math.random()-0.5)*0.12);
-            createBullet(offset);
+            let offsetDir = baseDir.clone().add(new THREE.Vector3(
+                (Math.random() - 0.5) * spreadFactor,
+                (Math.random() - 0.5) * spreadFactor,
+                (Math.random() - 0.5) * spreadFactor
+            ));
+            createBullet(origin, offsetDir);
         }
     } else {
-        createBullet();
+        createBullet(origin, baseDir);
+    }
+}
+
+// 觸發 Admin Pro 的分裂子彈 (打到第一個敵人時分裂成 3 顆)
+function triggerBulletSplit(bullet, hitEnemy) {
+    const splitCount = 3;
+    const baseDir = bullet.dir.clone();
+    for (let i = 0; i < splitCount; i++) {
+        let angleOffset = (i - 1) * 0.35 + (Math.random() - 0.5) * 0.1;
+        let splitDir = baseDir.clone().applyAxisAngle(new THREE.Vector3(0, 1, 0), angleOffset);
+        splitDir.y += (Math.random() - 0.5) * 0.15;
+
+        const geo = new THREE.SphereGeometry(0.15);
+        const mat = new THREE.MeshBasicMaterial({ color: 0xff00aa });
+        const splitB = new THREE.Mesh(geo, mat);
+        splitB.position.copy(bullet.mesh.position);
+
+        bullets.push({
+            mesh: splitB,
+            dir: splitDir.normalize(),
+            damage: bullet.damage * 0.6,
+            life: 50,
+            color: 0xff00aa,
+            canSplit: false,
+            pierceLeft: 0,
+            ignoreEnemy: hitEnemy,
+            elem: bullet.elem
+        });
+        scene.add(splitB);
     }
 }
 
@@ -669,8 +714,9 @@ function triggerLuckyDrop() {
     let text = "";
 
     if (type === 'hp') {
-        maxHp += 20; hp = Math.min(maxHp, hp + 30);
-        text = "🎁 幸運掉落：生命值上限 +20 & 回復 30 HP！";
+        maxHp = Math.round(maxHp * 1.3 * 10) / 10;
+        hp = Math.min(maxHp, hp + 30);
+        text = `🎁 幸運掉落：生命值上限增加至 ${maxHp}！`;
     } else if (type === 'dmg') {
         damageMult += 0.15;
         text = "🎁 幸運掉落：武器整體傷害 +15%！";
@@ -800,7 +846,14 @@ function buyUpgrade(type) {
     if (gold >= cost) {
         gold -= cost;
         if (type === 'hp') {
-            maxHp += 25; hp += 25;
+            // 血量乘以 1.3 (100 -> 130 -> 169...)
+            maxHp = Math.round(maxHp * 1.3 * 10) / 10;
+            hp = Math.round((hp * 1.3) * 10) / 10;
+            showMsg(`❤️ 血量上限提升至 ${maxHp}！`);
+        } else if (type === 'medkit') {
+            // 醫療包回復效果乘以 1.3
+            medkitHealAmount = Math.round(medkitHealAmount * 1.3 * 10) / 10;
+            showMsg(`💚 醫療包回復效果提升至 ${medkitHealAmount} HP！`);
         } else if (type === 'dmg') {
             damageMult += 0.20;
         } else if (type === 'speed') {
@@ -848,6 +901,8 @@ function updateShopUI() {
     }
 
     document.getElementById('cost-hp').innerText = upgradeCosts.hp;
+    document.getElementById('cost-medkit').innerText = upgradeCosts.medkit;
+    document.getElementById('val-medkit').innerText = medkitHealAmount;
     document.getElementById('cost-dmg').innerText = upgradeCosts.dmg;
     document.getElementById('cost-speed').innerText = upgradeCosts.speed;
     document.getElementById('cost-firerate').innerText = upgradeCosts.firerate;
@@ -863,7 +918,7 @@ function updateShopUI() {
 }
 
 function updateUI() {
-    document.getElementById('hp').innerText = `${Math.max(0, Math.floor(hp))}/${maxHp}`;
+    document.getElementById('hp').innerText = `${Math.max(0, Math.round(hp))}/${maxHp}`;
     document.getElementById('gold').innerText = gold;
     document.getElementById('wave').innerText = wave;
     
@@ -959,8 +1014,6 @@ function triggerElementEffect(hitZombie, bullet) {
             if (z !== hitZombie && count < maxTargets && z.mesh.position.distanceTo(hitZombie.mesh.position) < (5.0 + bullet.elem.elecLv)) {
                 z.hp -= chainDmg;
                 createHitParticles(z.mesh.position, 0x00ffff);
-                
-                // ⚡ 高畫質模式下的閃電連線效果
                 if (graphicsQuality === 'high') {
                     createLightningBeam(hitZombie.mesh.position.clone().add(new THREE.Vector3(0, 1, 0)), z.mesh.position.clone().add(new THREE.Vector3(0, 1, 0)));
                 }
@@ -973,8 +1026,6 @@ function triggerElementEffect(hitZombie, bullet) {
         let radius = 3.0 + (bullet.elem.bombLv * 0.8);
         let bombDmg = bullet.damage * (0.3 + bullet.elem.bombLv * 0.2);
         createHitParticles(bullet.mesh.position, 0xffaa00, 15);
-        
-        // 💥 高畫質模式下的擴散爆炸光環
         if (graphicsQuality === 'high') {
             createExplosionRing(bullet.mesh.position.clone(), radius);
         }
@@ -1053,8 +1104,8 @@ function animate() {
         m.mesh.position.y = 0.2 + Math.sin(Date.now() * 0.003) * 0.1;
 
         if (camera.position.distanceTo(m.mesh.position) < 2.5) {
-            hp = Math.min(maxHp, hp + m.healAmount);
-            showMsg(`💚 拾取醫藥包，回復了 ${m.healAmount} 點血量！`);
+            hp = Math.min(maxHp, hp + medkitHealAmount);
+            showMsg(`💚 拾取醫藥包，回復了 ${medkitHealAmount} 點血量！`);
             updateUI();
             
             scene.remove(m.mesh);
@@ -1062,7 +1113,6 @@ function animate() {
         }
     }
 
-    // 清理高畫質電擊雷射 beam
     for (let i = lightningBeams.length - 1; i >= 0; i--) {
         let beam = lightningBeams[i];
         beam.life--;
@@ -1072,7 +1122,6 @@ function animate() {
         }
     }
 
-    // 清理高畫質爆炸環
     for (let i = expRings.length - 1; i >= 0; i--) {
         let ring = expRings[i];
         ring.radius += (ring.maxRadius - ring.radius) * 0.2;
@@ -1086,6 +1135,7 @@ function animate() {
         }
     }
 
+    // 子彈飛行與碰撞（含 Admin Pro 分裂與穿透機制）
     for (let i = bullets.length - 1; i >= 0; i--) {
         let b = bullets[i];
         b.mesh.position.addScaledVector(b.dir, 0.9);
@@ -1093,6 +1143,8 @@ function animate() {
 
         for (let j = zombies.length - 1; j >= 0; j--) {
             let z = zombies[j];
+            if (b.ignoreEnemy === z) continue; // 避免剛產生的分裂彈重複擊中自身
+
             if (b.mesh.position.distanceTo(z.mesh.position.clone().add(new THREE.Vector3(0, 1, 0))) < 0.9 * z.scale) {
                 z.hp -= b.damage;
                 z.mesh.position.addScaledVector(b.dir, 0.15);
@@ -1111,8 +1163,20 @@ function animate() {
                     }
                 }, 70);
 
-                scene.remove(b.mesh);
-                bullets.splice(i, 1);
+                // Admin Pro 分裂機制：打到第一個敵人時分裂 3 顆彈藥
+                if (b.canSplit) {
+                    triggerBulletSplit(b, z);
+                    b.canSplit = false;
+                }
+
+                // 穿透判定 (允許穿越 1 個敵人)
+                if (b.pierceLeft > 0) {
+                    b.pierceLeft--;
+                    b.ignoreEnemy = z; // 下一幀忽略該敵人
+                } else {
+                    scene.remove(b.mesh);
+                    bullets.splice(i, 1);
+                }
 
                 if (z.hp <= 0) {
                     handleZombieDeath(z);
@@ -1171,7 +1235,6 @@ function animate() {
             z.burnTimer -= 0.05;
             z.hp -= z.burnDmg * 0.05;
             
-            // 🔥 高畫質模式下的燃燒冒煙/火花效果
             if (graphicsQuality === 'high') {
                 createHitParticles(z.mesh.position.clone().add(new THREE.Vector3(0, Math.random() * z.scale, 0)), 0xff3300, 2);
             } else if (graphicsQuality === 'mid' && Math.random() < 0.3) {
@@ -1217,7 +1280,6 @@ function animate() {
         
         z.mesh.lookAt(camera.position.x, 0, camera.position.z);
 
-        // ⚔️ 碰撞傷害： Boss 或小怪扣除對應數量的傷害
         if (horizontalDist <= attackRange + 0.3 && !isPlayerAboveEnemy) {
             let dmgPerFrame = z.isBoss ? (diffMult.bossDmg / 6) : (diffMult.normalDmg / 6);
             hp -= dmgPerFrame;
